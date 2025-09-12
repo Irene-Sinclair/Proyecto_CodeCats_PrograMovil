@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'login/login.dart'; // 👈 Importa tu archivo
+import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,7 +18,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
       ),
-      home: const LoginPage(), // 👈 Aquí llamamos la clase del archivo login.dart
+      home: const AdminSettingsScreen(), // 👈 Aquí llamamos la clase del archivo login.dart
     );
   }
 }
