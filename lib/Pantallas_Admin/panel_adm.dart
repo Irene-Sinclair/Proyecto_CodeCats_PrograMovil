@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:proyecto_codecats/AgregarProductos/agregar_productos.dart';
+import 'package:proyecto_codecats/GestionProductos/gestion_productos.dart';
+import 'package:proyecto_codecats/Pantallas_Admin/gestion_clientes_adm.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
-  const AdminSettingsScreen({Key? key}) : super(key: key);
+  const AdminSettingsScreen({super.key});
 
   @override
   State<AdminSettingsScreen> createState() => _AdminSettingsScreenState();
@@ -31,18 +34,11 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
     super.dispose();
   }
 
-  void _navigateToScreen(String screenName) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Esto redirecciona a $screenName',
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.grey.shade800,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+  void _navigateToScreen(Widget screenName) {
+     Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => screenName),
+  );
   }
 
   @override
@@ -84,21 +80,21 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
               _buildMenuOption(
                 icon: Icons.edit_outlined,
                 title: 'Gestión de Productos',
-                onTap: () => _navigateToScreen('Gestión de Productos'),
+                onTap: () => _navigateToScreen(GestionProductosScreen()),
                 index: 0,
               ),
               const SizedBox(height: 16),
               _buildMenuOption(
                 icon: Icons.person_outline,
                 title: 'Gestión de Clientes',
-                onTap: () => _navigateToScreen('Gestión de Clientes'),
+                onTap: () => _navigateToScreen(ClientManagementScreen()),
                 index: 1,
               ),
               const SizedBox(height: 16),
               _buildMenuOption(
                 icon: Icons.add_circle_outline,
                 title: 'Crear Productos',
-                onTap: () => _navigateToScreen('Crear Productos'),
+                onTap: () => _navigateToScreen(AgregarProductoScreen()),
                 index: 2,
               ),
             ],
@@ -179,7 +175,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
                           ),
                           child: Icon(
                             icon,
-                            color: Colors.black, // Cambiado a Colors.black
+                            color: Colors.black, 
                             size: 24,
                           ),
                         ),
