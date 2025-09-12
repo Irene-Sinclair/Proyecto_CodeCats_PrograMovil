@@ -54,17 +54,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
         elevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+
           child: IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(
