@@ -1,0 +1,22 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "americano-cruz",
+                    "appId": "1:511336665354:android:03af4e517b7a2e3c2f6af3",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "americano-cruz",
+                    "configurations": {
+                        "android": "1:511336665354:android:03af4e517b7a2e3c2f6af3",
+                        "ios": "1:511336665354:ios:e40b711ade85ffe22f6af3"
+                    }
+                }
+            }
+        }
+    }
+}

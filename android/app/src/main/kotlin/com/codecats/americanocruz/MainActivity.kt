@@ -1,4 +1,4 @@
-package com.example.proyecto_codecats
+package com.codecats.americanocruz
 
 import io.flutter.embedding.android.FlutterActivity
 

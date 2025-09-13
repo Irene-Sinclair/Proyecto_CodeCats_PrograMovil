@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "511336665354",
+    "project_id": "americano-cruz",
+    "storage_bucket": "americano-cruz.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:511336665354:android:03af4e517b7a2e3c2f6af3",
+        "android_client_info": {
+          "package_name": "com.codecats.americanocruz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApo33SDnlL89qAHg5PB8dsZG-NdYFFv88"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

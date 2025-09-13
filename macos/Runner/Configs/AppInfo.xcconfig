@@ -8,7 +8,7 @@
 PRODUCT_NAME = proyecto_codecats
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.proyectoCodecats
+PRODUCT_BUNDLE_IDENTIFIER = com.codecats.americanocruz
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2025 com.codecats. All rights reserved.
