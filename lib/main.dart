@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:flutter/material.dart';
-import 'login/login.dart'; // 👈 Importa tu archivo
-import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';
+import 'login/login.dart'; 
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +25,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
       ),
       home:
-          const AdminSettingsScreen(), // 👈 Aquí llamamos la clase del archivo login.dart
+          const LoginPage(), // 👈 Aquí llamamos la clase del archivo login.dart
     );
   }
 }
