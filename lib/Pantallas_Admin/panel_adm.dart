@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:proyecto_codecats/AgregarProductos/agregar_productos.dart';
 import 'package:proyecto_codecats/GestionProductos/gestion_productos.dart';
 import 'package:proyecto_codecats/Pantallas_Admin/gestion_clientes_adm.dart';
+import 'package:proyecto_codecats/Carrito/carrito.dart';
+import 'package:proyecto_codecats/Catalogo/catalogo.dart';
+
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -14,6 +17,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  int _currentIndex = 3; // Índice inicial para Ajustes
 
   @override
   void initState() {
@@ -35,10 +39,41 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
   }
 
   void _navigateToScreen(Widget screenName) {
-     Navigator.push(
-    context,
-    MaterialPageRoute(builder: (context) => screenName),
-  );
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => screenName),
+    );
+  }
+
+  void _onBottomNavItemTapped(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+
+    // Navegar a la pantalla correspondiente
+    switch (index) {
+      case 0: // Home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Catalogo()),
+        );
+        break;
+      case 1: // Carrito
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Carrito()),
+        );
+        break;
+      case 2: // Perfil
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => Carrito()),
+        );
+        break;
+      case 3: // Ajustes (ya estamos aquí)
+        // No hacer nada, ya estamos en ajustes
+        break;
+    }
   }
 
   @override
@@ -50,7 +85,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
         elevation: 0,
         leading: Container(
           margin: const EdgeInsets.all(8),
-
           child: IconButton(
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(
@@ -116,10 +150,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _buildBottomNavItem(Icons.home_outlined, false),
-            _buildBottomNavItem(Icons.shopping_cart_outlined, false),
-            _buildBottomNavItem(Icons.person_outline, false),
-            _buildBottomNavItem(Icons.settings_outlined, true),
+            _buildBottomNavItem(Icons.home_outlined, 0, 'Inicio'),
+            _buildBottomNavItem(Icons.shopping_cart_outlined, 1, 'Carrito'),
+            _buildBottomNavItem(Icons.person_outline, 2, 'Perfil'),
+            _buildBottomNavItem(Icons.settings_outlined, 3, 'Ajustes'),
           ],
         ),
       ),
@@ -207,17 +241,35 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
     );
   }
 
-  Widget _buildBottomNavItem(IconData icon, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isActive ? Colors.blue.shade50 : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        icon,
-        color: isActive ? Colors.black : Colors.grey.shade500,
-        size: 24,
+  Widget _buildBottomNavItem(IconData icon, int index, String tooltip) {
+    bool isActive = _currentIndex == index;
+    return GestureDetector(
+      onTap: () => _onBottomNavItemTapped(index),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isActive ? Colors.blue.shade50 : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isActive ? Colors.black : Colors.grey.shade500,
+              size: 24,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              tooltip,
+              style: TextStyle(
+                fontSize: 10,
+                color: isActive ? Colors.black : Colors.grey.shade500,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

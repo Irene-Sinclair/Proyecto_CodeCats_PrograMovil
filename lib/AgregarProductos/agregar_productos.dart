@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AgregarProductoScreen extends StatefulWidget {
   const AgregarProductoScreen({Key? key}) : super(key: key);
@@ -8,13 +9,13 @@ class AgregarProductoScreen extends StatefulWidget {
 }
 
 class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _precioController = TextEditingController();
+  final TextEditingController _tallaController = TextEditingController();
   
-  String? _tallaSeleccionada;
   String? _categoriaSeleccionada;
   
-  final List<String> _tallas = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   final List<String> _categorias = [
     'Camisetas',
     'Pantalones', 
@@ -23,6 +24,8 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     'Vestidos',
     'Chaquetas'
   ];
+
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
@@ -64,17 +67,11 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    _buildDropdownField(
+                    _buildTextField(
                       label: 'Talla',
                       icon: Icons.straighten,
-                      value: _tallaSeleccionada,
-                      items: _tallas,
-                      hint: 'Seleccionar talla',
-                      onChanged: (String? value) {
-                        setState(() {
-                          _tallaSeleccionada = value;
-                        });
-                      },
+                      controller: _tallaController,
+                      hintText: 'Ej: M, L, 38, 40, etc.',
                     ),
                     const SizedBox(height: 20),
                     
@@ -109,7 +106,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _agregarProducto,
+                    onPressed: _isLoading ? null : _agregarProducto,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
@@ -118,13 +115,18 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Agregar Producto',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                            strokeWidth: 2,
+                          )
+                        : const Text(
+                            'Agregar Producto',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -133,7 +135,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
                   width: double.infinity,
                   height: 50,
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: _isLoading ? null : () => Navigator.pop(context),
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey[600],
                       shape: RoundedRectangleBorder(
@@ -217,6 +219,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     required IconData icon,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    String? hintText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,6 +243,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
           controller: controller,
           keyboardType: keyboardType,
           decoration: InputDecoration(
+            hintText: hintText,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey[300]!),
@@ -344,19 +348,49 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     );
   }
 
-  void _agregarProducto() {
-    if (_nombreController.text.isEmpty ||
-        _precioController.text.isEmpty ||
-        _tallaSeleccionada == null ||
-        _categoriaSeleccionada == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, completa todos los campos'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
+  Future<void> _agregarProducto() async {
+  if (_nombreController.text.isEmpty ||
+      _precioController.text.isEmpty ||
+      _tallaController.text.isEmpty ||
+      _categoriaSeleccionada == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Por favor, completa todos los campos'),
+        backgroundColor: Colors.red,
+      ),
+    );
+    return;
+  }
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    print('Intentando agregar producto...');
+    
+    // Convertir precio a número
+    final precio = double.tryParse(_precioController.text);
+    if (precio == null) {
+      throw Exception('El precio debe ser un número válido');
     }
+
+    // Datos del producto
+    final productoData = {
+      'nombre': _nombreController.text.trim(),
+      'precio': precio,
+      'talla': _tallaController.text.trim(),
+      'categoria': _categoriaSeleccionada,
+      'imagen': 'https://via.placeholder.com/150/8B4513/FFFFFF?text=Producto',
+      'codigo': _generarCodigoUnico(),
+      'activo': true,
+    };
+
+    print('Datos del producto: $productoData');
+    
+    // Crear el producto en Firebase
+    final docRef = await _firestore.collection('Products').add(productoData);
+    print('Producto agregado con ID: ${docRef.id}');
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -366,12 +400,37 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     );
 
     Navigator.pop(context);
+    
+  } catch (error) {
+    print('Error al agregar producto: $error');
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Error al agregar producto: ${error.toString()}'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 5),
+      ),
+    );
+    
+  } finally {
+    print('Finalizando proceso de agregar producto');
+    setState(() {
+      _isLoading = false;
+    });
+  }
+}
+
+  String _generarCodigoUnico() {
+    // Generar un código único basado en timestamp
+    final now = DateTime.now();
+    return 'PROD-${now.millisecondsSinceEpoch}';
   }
 
   @override
   void dispose() {
     _nombreController.dispose();
     _precioController.dispose();
+    _tallaController.dispose();
     super.dispose();
   }
 }

@@ -1,41 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto_codecats/AgregarProductos/agregar_productos.dart';
 import 'package:proyecto_codecats/EditarProductos/editar_productos.dart';
 
 class GestionProductosScreen extends StatelessWidget {
-  // Lista de productos ficticios
-  final List<Map<String, String>> productos = [
-    {
-      'id': '1',
-      'nombre': 'Producto 1',
-      'codigo': '1101',
-      'imagen': 'https://via.placeholder.com/50x50/8B4513/FFFFFF?text=P1'
-    },
-    {
-      'id': '2',
-      'nombre': 'Producto 2',
-      'codigo': '1102',
-      'imagen': 'https://via.placeholder.com/50x50/8B4513/FFFFFF?text=P2'
-    },
-    {
-      'id': '3',
-      'nombre': 'Producto 3',
-      'codigo': '1103',
-      'imagen': 'https://via.placeholder.com/50x50/8B4513/FFFFFF?text=P3'
-    },
-    {
-      'id': '4',
-      'nombre': 'Producto 4',
-      'codigo': '1104',
-      'imagen': 'https://via.placeholder.com/50x50/8B4513/FFFFFF?text=P4'
-    },
-    {
-      'id': '5',
-      'nombre': 'Producto 5',
-      'codigo': '1105',
-      'imagen': 'https://via.placeholder.com/50x50/8B4513/FFFFFF?text=P5'
-    },
-  ];
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -120,110 +89,177 @@ class GestionProductosScreen extends StatelessWidget {
             ),
           ),
           
-          // Lista de productos
+          // Lista de productos desde Firebase
           Expanded(
             child: Container(
               color: Colors.white,
-              child: ListView.separated(
-                padding: EdgeInsets.zero,
-                itemCount: productos.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  color: Colors.grey[200],
-                ),
-                itemBuilder: (context, index) {
-                  final producto = productos[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    leading: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Color(0xFF8B4513),
-                        borderRadius: BorderRadius.circular(8),
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _firestore.collection('Products').snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Text('Error: ${snapshot.error}'),
+                    );
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'No hay productos registrados',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 16,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Presiona "Agregar" para crear el primero',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.network(
-                          producto['imagen']!,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Color(0xFF8B4513),
-                              child: Center(
-                                child: Text(
-                                  'P${index + 1}',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                    );
+                  }
+
+                  final productos = snapshot.data!.docs;
+
+                  return ListView.separated(
+                    padding: EdgeInsets.zero,
+                    itemCount: productos.length,
+                    separatorBuilder: (context, index) => Divider(
+                      height: 1,
+                      color: Colors.grey[200],
+                    ),
+                    itemBuilder: (context, index) {
+                      final producto = productos[index];
+                      final datos = producto.data() as Map<String, dynamic>;
+                      final productoId = producto.id;
+
+                      return ListTile(
+                        contentPadding: EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        leading: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Color(0xFF8B4513),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: datos['imagen'] != null
+                              ? ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.network(
+                                    datos['imagen'],
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return _buildPlaceholderImage(datos['nombre'] ?? 'P');
+                                    },
                                   ),
-                                ),
-                              ),
-                            );
-                          },
+                                )
+                              : _buildPlaceholderImage(datos['nombre'] ?? 'P'),
                         ),
-                      ),
-                    ),
-                    title: Text(
-                      producto['nombre']!,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Código: ${producto['codigo']}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Botón editar
-                        GestureDetector(
-                          onTap: () {
-                            // Descomenta cuando tengas EditarProductoScreen
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => EditarProductoScreen(
-                                  productoId: producto['id']!,
-                                ),
-                              ),
-                            );
-                           
-                          },
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.edit_outlined,
-                              color: Colors.grey[600],
-                              size: 20,
-                            ),
+                        title: Text(
+                          datos['nombre'] ?? 'Sin nombre',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                        SizedBox(width: 8),
-                        // Botón eliminar
-                        GestureDetector(
-                          onTap: () {
-                            _mostrarDialogoEliminar(context, producto['nombre']!);
-                          },
-                          child: Container(
-                            padding: EdgeInsets.all(8),
-                            child: Icon(
-                              Icons.delete_outline,
-                              color: Colors.grey[600],
-                              size: 20,
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Código: ${datos['codigo'] ?? 'Sin código'}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Talla: ${datos['talla'] ?? 'Sin talla'}',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                            Text(
+                              'Precio: \$${datos['precio']?.toStringAsFixed(2) ?? '0.00'}',
+                              style: TextStyle(
+                                color: Colors.green[700],
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Botón editar
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => EditarProductoScreen(
+                                      productoId: productoId,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(8),
+                                child: Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.grey[600],
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            // Botón eliminar
+                            GestureDetector(
+                              onTap: () {
+                                _mostrarDialogoEliminar(
+                                  context,
+                                  datos['nombre'] ?? 'este producto',
+                                  productoId,
+                                );
+                              },
+                              child: Container(
+                                padding: EdgeInsets.all(8),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  color: Colors.grey[600],
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -234,7 +270,23 @@ class GestionProductosScreen extends StatelessWidget {
     );
   }
 
-  void _mostrarDialogoEliminar(BuildContext context, String nombreProducto) {
+  Widget _buildPlaceholderImage(String nombre) {
+    return Container(
+      color: Color(0xFF8B4513),
+      child: Center(
+        child: Text(
+          nombre.isNotEmpty ? nombre[0].toUpperCase() : 'P',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _mostrarDialogoEliminar(BuildContext context, String nombreProducto, String productoId) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -250,14 +302,24 @@ class GestionProductosScreen extends StatelessWidget {
               ),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Producto "$nombreProducto" eliminado'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                try {
+                  await _firestore.collection('Products').doc(productoId).delete();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Producto "$nombreProducto" eliminado'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } catch (error) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error al eliminar: $error'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               },
               child: Text(
                 'Eliminar',
@@ -270,4 +332,3 @@ class GestionProductosScreen extends StatelessWidget {
     );
   }
 }
-

@@ -1,23 +1,5 @@
 import 'package:flutter/material.dart';
-
-// Producto
-class Producto {
-  final String id;
-  String nombre;
-  String talla;
-  String categoria;
-  double precio;
-  String? imagenUrl;
-
-  Producto({
-    required this.id,
-    required this.nombre,
-    required this.talla,
-    required this.categoria,
-    required this.precio,
-    this.imagenUrl,
-  });
-}
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EditarProductoScreen extends StatefulWidget {
   final String productoId;
@@ -32,14 +14,13 @@ class EditarProductoScreen extends StatefulWidget {
 }
 
 class _EditarProductoScreenState extends State<EditarProductoScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _precioController = TextEditingController();
+  final TextEditingController _tallaController = TextEditingController();
   
-  String? _tallaSeleccionada;
   String? _categoriaSeleccionada;
-  Producto? _producto;
   
-  final List<String> _tallas = ['XS', 'S', 'M', 'L', 'XL', 'XXL'];
   final List<String> _categorias = [
     'Ropa',
     'Zapatos',
@@ -50,44 +31,9 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     'Chaquetas'
   ];
 
-  // Lista de productos simulada
-  final List<Producto> _productosSimulados = [
-    Producto(
-      id: '1',
-      nombre: 'Camiseta Básica',
-      talla: 'M',
-      categoria: 'Ropa',
-      precio: 25.99,
-    ),
-    Producto(
-      id: '2',
-      nombre: 'Jeans Clásicos',
-      talla: 'L',
-      categoria: 'Pantalones',
-      precio: 89.99,
-    ),
-    Producto(
-      id: '3',
-      nombre: 'Zapatillas Deportivas',
-      talla: 'XL',
-      categoria: 'Zapatos',
-      precio: 129.99,
-    ),
-    Producto(
-      id: '4',
-      nombre: 'Vestido de Verano',
-      talla: 'S',
-      categoria: 'Vestidos',
-      precio: 45.50,
-    ),
-    Producto(
-      id: '5',
-      nombre: 'Chaqueta de Cuero',
-      talla: 'L',
-      categoria: 'Chaquetas',
-      precio: 199.99,
-    ),
-  ];
+  bool _isLoading = true;
+  bool _guardando = false;
+  Map<String, dynamic>? _productoData;
 
   @override
   void initState() {
@@ -95,37 +41,40 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     _cargarProducto();
   }
 
-  void _cargarProducto() {
-    // Buscar el producto por ID
+  Future<void> _cargarProducto() async {
     try {
-      _producto = _productosSimulados.firstWhere(
-        (producto) => producto.id == widget.productoId,
-      );
+      final doc = await _firestore.collection('Products').doc(widget.productoId).get();
       
-      // Cargar los datos en los controladores
-      _nombreController.text = _producto!.nombre;
-      _precioController.text = _producto!.precio.toString();
-      _tallaSeleccionada = _producto!.talla;
-      _categoriaSeleccionada = _producto!.categoria;
-      
-      setState(() {});
-    } catch (e) {
-      // Si no se encuentra el producto, mostrar error
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Producto no encontrado'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        Navigator.pop(context);
-      });
+      if (doc.exists) {
+        setState(() {
+          _productoData = doc.data()!;
+          _nombreController.text = _productoData!['nombre'] ?? '';
+          _precioController.text = _productoData!['precio']?.toString() ?? '';
+          _tallaController.text = _productoData!['talla'] ?? '';
+          _categoriaSeleccionada = _productoData!['categoria'];
+          _isLoading = false;
+        });
+      } else {
+        _mostrarError('Producto no encontrado');
+      }
+    } catch (error) {
+      _mostrarError('Error al cargar producto: $error');
     }
+  }
+
+  void _mostrarError(String mensaje) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensaje),
+        backgroundColor: Colors.red,
+      ),
+    );
+    Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_producto == null) {
+    if (_isLoading) {
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(),
@@ -140,7 +89,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+          onPressed: _guardando ? null : () => _cancelarEdicion(),
         ),
         title: const Text(
           'Editar producto',
@@ -173,18 +122,12 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    // Campo talla
-                    _buildDropdownField(
+                    // Campo talla (ahora es texto)
+                    _buildTextField(
                       label: 'Talla',
                       icon: Icons.straighten,
-                      value: _tallaSeleccionada,
-                      items: _tallas,
-                      hint: 'Seleccionar talla',
-                      onChanged: (value) {
-                        setState(() {
-                          _tallaSeleccionada = value;
-                        });
-                      },
+                      controller: _tallaController,
+                      hintText: 'Ej: M, L, 38, 40, etc.',
                     ),
                     const SizedBox(height: 20),
                     
@@ -223,7 +166,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _guardarCambios,
+                    onPressed: _guardando ? null : _guardarCambios,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.black,
                       foregroundColor: Colors.white,
@@ -232,13 +175,18 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                       ),
                       elevation: 0,
                     ),
-                    child: const Text(
-                      'Guardar Cambios',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+                    child: _guardando
+                        ? const CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                            strokeWidth: 2,
+                          )
+                        : const Text(
+                            'Guardar Cambios',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -248,7 +196,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                   width: double.infinity,
                   height: 50,
                   child: TextButton(
-                    onPressed: _cancelarEdicion,
+                    onPressed: _guardando ? null : _cancelarEdicion,
                     style: TextButton.styleFrom(
                       foregroundColor: Colors.grey[600],
                       shape: RoundedRectangleBorder(
@@ -303,24 +251,36 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           child: InkWell(
             onTap: _seleccionarImagen,
             borderRadius: BorderRadius.circular(8),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.image_outlined,
-                  size: 32,
-                  color: Colors.grey[400],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tocar para agregar imagen',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
+            child: _productoData?['imagen'] != null
+                ? Image.network(
+                    _productoData!['imagen'],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildPlaceholderImage();
+                    },
+                  )
+                : _buildPlaceholderImage(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlaceholderImage() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.image_outlined,
+          size: 32,
+          color: Colors.grey[400],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Tocar para cambiar imagen',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
           ),
         ),
       ],
@@ -332,6 +292,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     required IconData icon,
     required TextEditingController controller,
     TextInputType? keyboardType,
+    String? hintText,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -355,6 +316,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           controller: controller,
           keyboardType: keyboardType,
           decoration: InputDecoration(
+            hintText: hintText,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey[300]!),
@@ -459,11 +421,11 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     );
   }
 
-  void _guardarCambios() {
+  Future<void> _guardarCambios() async {
     // Validar campos
     if (_nombreController.text.isEmpty ||
         _precioController.text.isEmpty ||
-        _tallaSeleccionada == null ||
+        _tallaController.text.isEmpty ||
         _categoriaSeleccionada == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -488,26 +450,46 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
       return;
     }
 
-    // Actualizar el producto en la lista
-    _producto!.nombre = _nombreController.text;
-    _producto!.talla = _tallaSeleccionada!;
-    _producto!.categoria = _categoriaSeleccionada!;
-    _producto!.precio = precio;
+    setState(() {
+      _guardando = true;
+    });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Producto "${_producto!.nombre}" actualizado exitosamente'),
-        backgroundColor: Colors.green,
-      ),
-    );
+    try {
+      // Actualizar el producto en Firebase
+      await _firestore.collection('Products').doc(widget.productoId).update({
+        'nombre': _nombreController.text.trim(),
+        'precio': precio,
+        'talla': _tallaController.text.trim(),
+        'categoria': _categoriaSeleccionada,
+        // Mantener la imagen existente si no se cambia
+        'imagen': _productoData?['imagen'] ?? 'https://via.placeholder.com/150/8B4513/FFFFFF?text=Producto',
+      });
 
-    // Regresar a la pantalla anterior
-    Navigator.pop(context, _producto);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Producto "${_nombreController.text}" actualizado exitosamente'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (error) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al actualizar: $error'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _guardando = false;
+      });
+    }
   }
 
   void _cancelarEdicion() {
     // Mostrar diálogo de confirmación si hay cambios
-    if (_hayaCambios()) {
+    if (_hayCambios()) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
@@ -536,20 +518,20 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     }
   }
 
-  bool _hayaCambios() {
-    if (_producto == null) return false;
+  bool _hayCambios() {
+    if (_productoData == null) return false;
     
-    return _nombreController.text != _producto!.nombre ||
-           _tallaSeleccionada != _producto!.talla ||
-           _categoriaSeleccionada != _producto!.categoria ||
-           _precioController.text != _producto!.precio.toString();
+    return _nombreController.text != _productoData!['nombre'] ||
+           _tallaController.text != _productoData!['talla'] ||
+           _categoriaSeleccionada != _productoData!['categoria'] ||
+           _precioController.text != _productoData!['precio']?.toString();
   }
 
- 
   @override
   void dispose() {
     _nombreController.dispose();
     _precioController.dispose();
+    _tallaController.dispose();
     super.dispose();
   }
 }
