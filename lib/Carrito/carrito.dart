@@ -31,7 +31,7 @@ class Carrito extends StatelessWidget {
                 const Divider(height: 1),
                 ListTile(
                   title: const Text("PAGO"),
-                  subtitle: const Text("Transferencia bancaria"),
+                  subtitle: const Text("Transferencia"),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {},
                 ),
@@ -46,28 +46,18 @@ class Carrito extends StatelessWidget {
             child: ListView(
               children: [
                 _buildCartItem(
-                  imageUrl: "assets/img/tenis_nike.jpg", // 👈 ejemplo
-                  title: "Tenis Nike Air Max",
-                  subtitle: "Talla 42\nCantidad: 1",
-                  price: "2,500 L",
+                  imageUrl:
+                      "https://via.placeholder.com/80", // cambia por tu imagen
+                  title: "Zapatos",
+                  subtitle: "Talla 32\nCantidad: 01",
+                  price: "10,99 L",
                 ),
                 _buildCartItem(
-                  imageUrl: "assets/img/camisa_nike.jpg",
-                  title: "Camisa Nike Dry-Fit",
-                  subtitle: "Talla M\nCantidad: 2",
-                  price: "1,200 L",
-                ),
-                _buildCartItem(
-                  imageUrl: "assets/img/pantalon_adidas.jpg",
-                  title: "Pantalón Adidas Jogger",
-                  subtitle: "Talla L\nCantidad: 1",
-                  price: "1,800 L",
-                ),
-                _buildCartItem(
-                  imageUrl: "assets/img/gorra_puma.jpg",
-                  title: "Gorra Puma Sport",
-                  subtitle: "Única\nCantidad: 1",
-                  price: "650 L",
+                  imageUrl:
+                      "https://via.placeholder.com/80", // cambia por tu imagen
+                  title: "Camisa",
+                  subtitle: "Talla M\nCantidad: 01",
+                  price: "8,99 L",
                 ),
               ],
             ),
@@ -87,7 +77,7 @@ class Carrito extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text("Total", style: TextStyle(fontSize: 16)),
-                    Text("6,150 L", style: TextStyle(fontSize: 16)),
+                    Text("19,98 L", style: TextStyle(fontSize: 16)),
                   ],
                 ),
                 const SizedBox(height: 10),
@@ -100,6 +90,7 @@ class Carrito extends StatelessWidget {
                     ),
                   ),
                   onPressed: () {
+                    // 👉 Aquí puedes poner la acción al presionar el botón
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Pedido realizado ✅")),
                     );
@@ -133,7 +124,7 @@ class Carrito extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: Image.asset( // 👈 ahora carga desde assets
+            child: Image.network(
               imageUrl,
               width: 60,
               height: 60,
