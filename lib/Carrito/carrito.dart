@@ -1,124 +1,550 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class Carrito extends StatelessWidget {
-  const Carrito({super.key});
+// Modelo para los artículos del carrito
+class CartItem {
+  final String id;
+  final String nombre;
+  final String descripcion;
+  final String imagen;
+  final double precio;
+  final String talla;
+  final int cantidad;
+  final String categoria;
+  final bool activo;
+
+  CartItem({
+    required this.id,
+    required this.nombre,
+    required this.descripcion,
+    required this.imagen,
+    required this.precio,
+    required this.talla,
+    required this.cantidad,
+    required this.categoria,
+    required this.activo,
+  });
+
+  factory CartItem.fromFirestore(Map<String, dynamic> productData, {int cantidad = 1}) {
+    return CartItem(
+      id: productData['codigo'] ?? '',
+      nombre: productData['nombre'] ?? 'Sin nombre',
+      descripcion: productData['categoria'] ?? 'Sin descripción',
+      imagen: productData['imagen'] ?? '',
+      precio: (productData['precio'] ?? 0).toDouble(),
+      talla: productData['talla'] ?? '',
+      cantidad: cantidad,
+      categoria: productData['categoria'] ?? '',
+      activo: productData['activo'] ?? false,
+    );
+  }
+}
+
+class PaymentScreen extends StatefulWidget {
+  final List<CartItem> cartItems;
+
+  const PaymentScreen({Key? key, this.cartItems = const []}) : super(key: key);
+
+  @override
+  _PaymentScreenState createState() => _PaymentScreenState();
+}
+
+class _PaymentScreenState extends State<PaymentScreen> {
+  String selectedPaymentMethod = 'Transferencia';
+  String shippingAddress = 'Añadir dirección de envío';
+  
+  // ID del usuario para pruebas - cambiar según necesites
+  final String currentUserId = 'CLIENT01';
+  
+  List<CartItem> firebaseCartItems = [];
+  bool isLoading = true;
+  String? errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCartFromFirebase();
+  }
+
+  Future<void> _loadCartFromFirebase() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      
+      // 1. Obtener los items del carrito para este usuario
+      QuerySnapshot cartSnapshot = await firestore
+          .collection('Carts')
+          .where('id_user', isEqualTo: currentUserId)
+          .get();
+
+      List<CartItem> loadedItems = [];
+
+      // 2. Para cada item del carrito, obtener los datos del producto
+      for (QueryDocumentSnapshot cartDoc in cartSnapshot.docs) {
+        Map<String, dynamic> cartData = cartDoc.data() as Map<String, dynamic>;
+        String productId = cartData['id_product'];
+        
+        // Contar cuántas veces aparece este producto (para la cantidad)
+        int cantidad = cartSnapshot.docs
+            .where((doc) => (doc.data() as Map<String, dynamic>)['id_product'] == productId)
+            .length;
+
+        // 3. Obtener los datos del producto desde la colección Products
+        QuerySnapshot productSnapshot = await firestore
+            .collection('Products')
+            .where('codigo', isEqualTo: productId)
+            .limit(1)
+            .get();
+
+        if (productSnapshot.docs.isNotEmpty) {
+          Map<String, dynamic> productData = productSnapshot.docs.first.data() as Map<String, dynamic>;
+          
+          // Solo agregar productos activos
+          if (productData['activo'] == true) {
+            CartItem item = CartItem.fromFirestore(productData, cantidad: cantidad);
+            
+            // Evitar duplicados
+            if (!loadedItems.any((existingItem) => existingItem.id == item.id)) {
+              loadedItems.add(item);
+            }
+          }
+        }
+      }
+
+      setState(() {
+        firebaseCartItems = loadedItems;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        errorMessage = 'Error al cargar el carrito: $e';
+        isLoading = false;
+      });
+      print('Error loading cart: $e');
+    }
+  }
+
+  Future<void> _removeItemFromCart(CartItem item) async {
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      
+      // Buscar y eliminar el item del carrito
+      QuerySnapshot cartSnapshot = await firestore
+          .collection('Carts')
+          .where('id_user', isEqualTo: currentUserId)
+          .where('id_product', isEqualTo: item.id)
+          .limit(1)
+          .get();
+
+      if (cartSnapshot.docs.isNotEmpty) {
+        await cartSnapshot.docs.first.reference.delete();
+        
+        // Recargar el carrito
+        await _loadCartFromFirebase();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Artículo eliminado del carrito')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al eliminar el artículo: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Usar datos de Firebase si están disponibles, sino usar los pasados como parámetro
+    final items = firebaseCartItems.isNotEmpty ? firebaseCartItems : widget.cartItems;
+    final total = items.fold<double>(0.0, (sum, item) => sum + (item.precio * item.cantidad));
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Carrito", style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
+      backgroundColor: Colors.white,
+      appBar: _buildAppBar(),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : errorMessage != null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, size: 64, color: Colors.red),
+                      SizedBox(height: 16),
+                      Text(
+                        errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _loadCartFromFirebase,
+                        child: Text('Reintentar'),
+                      ),
+                    ],
+                  ),
+                )
+              : items.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'Tu carrito está vacío',
+                            style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                          ),
+                        ],
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                // Información del usuario
+                                Container(
+                                  padding: EdgeInsets.all(16),
+                                  color: Colors.grey[50],
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.person, color: Colors.grey[600]),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Usuario: $currentUserId',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.grey[700],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                
+                                // Sección de envío
+                                _buildShippingSection(),
+                                
+                                Divider(height: 1, color: Colors.grey[300]),
+                                
+                                // Sección de pago
+                                _buildPaymentSection(),
+                                
+                                Divider(height: 1, color: Colors.grey[300]),
+                                
+                                // Lista de artículos
+                                _buildItemsSection(items),
+                                
+                                // Total
+                                _buildTotalSection(total),
+                              ],
+                            ),
+                          ),
+                        ),
+                        
+                        // Botón de realizar pedido
+                        _buildOrderButton(),
+                      ],
+                    ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar() {
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      leading: IconButton(
+        icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 20),
+        onPressed: () => Navigator.pop(context),
+      ),
+      title: Text(
+        'Pantalla de pago',
+        style: TextStyle(
+          color: Colors.black,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
-      body: Column(
+      centerTitle: true,
+      actions: [
+        IconButton(
+          icon: Icon(Icons.refresh, color: Colors.black),
+          onPressed: _loadCartFromFirebase,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildShippingSection() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sección de Envío y Pago
-          Container(
-            color: Colors.white,
-            child: Column(
-              children: [
-                ListTile(
-                  title: const Text("ENVÍO"),
-                  subtitle: const Text("Añadir dirección de envío"),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {},
-                ),
-                const Divider(height: 1),
-                ListTile(
-                  title: const Text("PAGO"),
-                  subtitle: const Text("Transferencia"),
-                  trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                  onTap: () {},
-                ),
-              ],
+          Text(
+            'ENVÍO',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              letterSpacing: 0.5,
             ),
           ),
-
-          const SizedBox(height: 10),
-
-          // Lista de artículos
-          Expanded(
-            child: ListView(
+          SizedBox(height: 12),
+          GestureDetector(
+            onTap: () {
+              _showAddressDialog();
+            },
+            child: Row(
               children: [
-                _buildCartItem(
-                  imagePath: "assets/img/shoes.jpg",
-                  title: "Producto 1",
-                  subtitle: "Talla 32\nCantidad: 01",
-                  price: "10,99 L",
-                ),
-                _buildCartItem(
-                  imagePath: "assets/img/shoes.jpg",
-                  title: "Producto 1",
-                  subtitle: "Talla 32\nCantidad: 01",
-                  price: "10,99 L",
-                ),
-                _buildCartItem(
-                  imagePath: "assets/img/shoes.jpg",
-                  title: "Producto 1",
-                  subtitle: "Talla 32\nCantidad: 01",
-                  price: "10,99 L",
-                ),
-                _buildCartItem(
-                  imagePath: "assets/img/shoes.jpg",
-                  title: "Producto 1",
-                  subtitle: "Talla 32\nCantidad: 01",
-                  price: "10,99 L",
-                ),
-                _buildCartItem(
-                  imagePath: "assets/img/shoes.jpg",
-                  title: "Producto 1",
-                  subtitle: "Talla 32\nCantidad: 01",
-                  price: "10,99 L",
-                ),
-                _buildCartItem(
-                  imagePath: "assets/img/shoes.jpg",
-                  title: "Producto 1",
-                  subtitle: "Talla 32\nCantidad: 01",
-                  price: "10,99 L",
-                ),
-              ],
-            ),
-          ),
-
-          // Total y Botón
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Colors.grey.shade300)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text("Total", style: TextStyle(fontSize: 16)),
-                    Text("19,98 L", style: TextStyle(fontSize: 16)),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
+                Expanded(
+                  child: Text(
+                    shippingAddress,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: shippingAddress == 'Añadir dirección de envío' 
+                          ? Colors.grey[600] 
+                          : Colors.black,
                     ),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Pedido realizado ✅")),
-                    );
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentSection() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'PAGO',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              letterSpacing: 0.5,
+            ),
+          ),
+          SizedBox(height: 12),
+          GestureDetector(
+            onTap: () {
+              _showPaymentMethodDialog();
+            },
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    selectedPaymentMethod,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemsSection(List<CartItem> items) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header de artículos
+          Container(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'ARTÍCULOS',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'DESCRIPCIÓN',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'PRECIO',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Lista de artículos
+          ...items.map((item) => _buildCartItem(item)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCartItem(CartItem item) {
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Imagen del producto
+          Expanded(
+            flex: 3,
+            child: Row(
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[200],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      item.imagen,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[200],
+                          child: Icon(
+                            Icons.image_not_supported,
+                            color: Colors.grey[400],
+                            size: 24,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Descripción
+          Expanded(
+            flex: 3,
+            child: Padding(
+              padding: EdgeInsets.only(left: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.categoria,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Text(
+                    item.nombre,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+                  if (item.talla.isNotEmpty)
+                    Text(
+                      'Talla ${item.talla}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  Text(
+                    'Cantidad: ${item.cantidad.toString().padLeft(2, '0')}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                  Text(
+                    'Código: ${item.id}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Precio y botón eliminar
+          Expanded(
+            flex: 2,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${(item.precio * item.cantidad).toStringAsFixed(2)} L',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                ),
+                SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () {
+                    _showDeleteItemDialog(item);
                   },
-                  child: const Text(
-                    "Realizar pedido",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  child: Icon(
+                    Icons.delete_outline,
+                    color: Colors.grey[400],
+                    size: 20,
                   ),
                 ),
               ],
@@ -129,51 +555,227 @@ class Carrito extends StatelessWidget {
     );
   }
 
-  Widget _buildCartItem({
-    required String imagePath,
-    required String title,
-    required String subtitle,
-    required String price,
-  }) {
+  Widget _buildTotalSection(double total) {
     return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
-        color: Colors.white,
-      ),
+      padding: EdgeInsets.all(16),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: Image.asset(
-              imagePath,
-              width: 60,
-              height: 60,
-              fit: BoxFit.cover,
+          Text(
+            'Total',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(subtitle, style: const TextStyle(color: Colors.grey)),
-              ],
+          Text(
+            '${total.toStringAsFixed(2)} L',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
             ),
-          ),
-          Column(
-            children: [
-              Text(price, style: const TextStyle(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              const Icon(Icons.delete, size: 20, color: Colors.grey),
-            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildOrderButton() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      child: SizedBox(
+        width: double.infinity,
+        height: 50,
+        child: ElevatedButton(
+          onPressed: firebaseCartItems.isEmpty ? null : () {
+            _processOrder();
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: firebaseCartItems.isEmpty ? Colors.grey : Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            elevation: 0,
+          ),
+          child: Text(
+            'Realizar pedido',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddressDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        String newAddress = '';
+        return AlertDialog(
+          title: Text('Dirección de envío'),
+          content: TextField(
+            onChanged: (value) => newAddress = value,
+            decoration: InputDecoration(
+              hintText: 'Ingresa tu dirección de envío',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 3,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                if (newAddress.isNotEmpty) {
+                  setState(() {
+                    shippingAddress = newAddress;
+                  });
+                }
+                Navigator.pop(context);
+              },
+              child: Text('Guardar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPaymentMethodDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Método de pago'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text('Transferencia'),
+                leading: Radio<String>(
+                  value: 'Transferencia',
+                  groupValue: selectedPaymentMethod,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedPaymentMethod = value!;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+              ListTile(
+                title: Text('Contra Entrega'),
+                leading: Radio<String>(
+                  value: 'Contra Entrega',
+                  groupValue: selectedPaymentMethod,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedPaymentMethod = value!;
+                    });
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cerrar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  
+
+  void _showDeleteItemDialog(CartItem item) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Eliminar artículo'),
+          content: Text('¿Estás seguro de que deseas eliminar "${item.nombre}" del carrito?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _removeItemFromCart(item);
+              },
+              child: Text('Eliminar', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _processOrder() {
+    if (shippingAddress == 'Añadir dirección de envío') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Por favor, añade una dirección de envío'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final total = firebaseCartItems.fold<double>(0.0, (sum, item) => sum + (item.precio * item.cantidad));
+
+    // Aquí implementarías la lógica para procesar el pedido
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Pedido realizado'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Tu pedido ha sido realizado exitosamente.'),
+              SizedBox(height: 16),
+              Text('Usuario: $currentUserId'),
+              Text('Total: ${total.toStringAsFixed(2)} L'),
+              Text('Método de pago: $selectedPaymentMethod'),
+              Text('Dirección: $shippingAddress'),
+              if (selectedPaymentMethod == 'Transferencia') ...[
+                SizedBox(height: 16),
+                Text(
+                  'Datos para transferencia:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text('Banco: Banco Nacional'),
+                Text('Cuenta: 1234567890'),
+                Text('Nombre: Tu Empresa'),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context); // Volver a la pantalla anterior
+              },
+              child: Text('Aceptar'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

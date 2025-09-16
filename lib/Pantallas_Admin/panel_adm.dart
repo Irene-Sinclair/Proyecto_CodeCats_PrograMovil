@@ -55,19 +55,19 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
       case 0: // Home
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Catalogo()),
+          MaterialPageRoute(builder: (context) => CatalogScreen()),
         );
         break;
       case 1: // Carrito
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Carrito()),
+          MaterialPageRoute(builder: (context) => PaymentScreen()),
         );
         break;
       case 2: // Perfil
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => Carrito()),
+          MaterialPageRoute(builder: (context) => PaymentScreen()),
         );
         break;
       case 3: // Ajustes (ya estamos aquí)
