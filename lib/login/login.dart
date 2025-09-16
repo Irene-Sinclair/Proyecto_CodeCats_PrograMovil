@@ -1,20 +1,38 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'registrarse.dart';
+import '../Catalogo/catalogo.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
-
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailCtrl = TextEditingController();
-  final _passCtrl = TextEditingController();
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _passCtrl = TextEditingController();
   bool _obscure = true;
   bool _remember = false;
+  bool _loading = false;
+
+  // Color de marca (morado que pediste)
+  static const Color kBrand = Color(0xFF843772);
+
+  bool _isGmail(String s) =>
+      RegExp(r'^[\w\.\-\+]+@gmail\.com$').hasMatch(s.trim());
+
+  void _clearAll() {
+    _emailCtrl.clear();
+    _passCtrl.clear();
+    setState(() {
+      _obscure = true;
+      _remember = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -23,14 +41,42 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _login() {
-    if (_formKey.currentState!.validate()) {
-      FocusScope.of(context).unfocus();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Iniciando sesión…')),
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _loading = true);
+
+    final email = _emailCtrl.text.trim();
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: _passCtrl.text,
       );
-      // 👉 Aquí integras tu auth (Firebase / API).
-      debugPrint('email: ${_emailCtrl.text}');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('remember_me', _remember);
+      if (!mounted) return;
+      _clearAll();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => CatalogScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String msg = 'No se pudo iniciar sesión (${e.code})';
+      if (e.code == 'invalid-email') msg = 'Email inválido (${e.code})';
+      if (e.code == 'user-not-found') {
+        msg = 'Usuario no existe. Corrobora o regístrate. (${e.code})';
+      }
+      if (e.code == 'wrong-password') msg = 'Contraseña incorrecta (${e.code})';
+      if (e.code == 'operation-not-allowed') {
+        msg = 'Método no habilitado en Firebase (${e.code})';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -53,7 +99,6 @@ class _LoginPageState extends State<LoginPage> {
                 constraints: const BoxConstraints(maxWidth: 420),
                 child: Column(
                   children: [
-                    // Logo
                     ClipOval(
                       child: Image.asset(
                         'assets/img/logo.jpg',
@@ -95,117 +140,176 @@ class _LoginPageState extends State<LoginPage> {
                                 style: TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w700,
+                                  color: _LoginPageState.kBrand,
                                 ),
                               ),
                               const SizedBox(height: 14),
+
+                              // Email @gmail
                               TextFormField(
                                 controller: _emailCtrl,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: const InputDecoration(
-                                  prefixIcon: Icon(Icons.mail_outline),
-                                  hintText: 'email',
+                                  prefixIcon: Icon(Icons.person_outline,
+                                      color: kBrand),
+                                  hintText: 'Correo @gmail.com',
+                                  hintStyle: TextStyle(color: kBrand),
                                 ),
+                                style: const TextStyle(color: kBrand),
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) {
-                                    return 'Ingresa tu email';
+                                    return 'Ingresa tu correo @gmail';
                                   }
-                                  final exp = RegExp(r'^[\w\.\-\+]+@[\w\-]+\.[\w\.\-]+$');
-                                  if (!exp.hasMatch(v.trim())) return 'Email no válido';
-                                  return null;
+                                  if (_isGmail(v.trim())) return null;
+                                  return 'Debe ser un correo @gmail.com válido';
                                 },
                               ),
                               const SizedBox(height: 12),
+
+                              // Password
                               TextFormField(
                                 controller: _passCtrl,
                                 obscureText: _obscure,
                                 decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.lock_outline),
+                                  prefixIcon: const Icon(Icons.lock_outline,
+                                      color: kBrand),
                                   hintText: 'password',
+                                  hintStyle: const TextStyle(color: kBrand),
                                   suffixIcon: IconButton(
-                                    onPressed: () => setState(() => _obscure = !_obscure),
-                                    icon: Icon(_obscure
-                                        ? Icons.visibility
-                                        : Icons.visibility_off),
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      color: kBrand,
+                                    ),
                                   ),
                                 ),
-                                validator: (v) =>
-                                    (v == null || v.length < 6) ? 'Mínimo 6 caracteres' : null,
+                                style: const TextStyle(color: kBrand),
+                                validator: (v) {
+                                  if (v == null || v.length < 6) {
+                                    return 'Mínimo 6 caracteres';
+                                  }
+                                  return null;
+                                },
                               ),
-                              const SizedBox(height: 6),
 
-                              // Remember + Forgot
+                              const SizedBox(height: 6),
                               Row(
                                 children: [
                                   Checkbox(
                                     value: _remember,
-                                    onChanged: (v) => setState(() => _remember = v ?? false),
+                                    onChanged: (v) => setState(
+                                        () => _remember = v ?? false),
+                                    activeColor: kBrand,
                                   ),
-                                  const Text('Recordarme'),
+                                  const Text('Recordarme',
+                                      style: TextStyle(color: kBrand)),
                                   const Spacer(),
                                   TextButton(
-                                    onPressed: () {
-                                      // Recuperar contraseña (placeholder)
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Recuperación de contraseña (demo)'),
-                                        ),
-                                      );
+                                    onPressed: () async {
+                                      final email = _emailCtrl.text.trim();
+                                      if (!_isGmail(email)) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Ingresa tu correo @gmail primero')));
+                                        return;
+                                      }
+                                      try {
+                                        await FirebaseAuth.instance
+                                            .sendPasswordResetEmail(
+                                                email: email);
+                                        if (!mounted) return;
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(const SnackBar(
+                                                content: Text(
+                                                    'Te enviamos un correo para restablecer tu contraseña')));
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(SnackBar(
+                                                content: Text('Error: $e')));
+                                      }
                                     },
-                                    child: const Text('¿Olvidaste tu contraseña?'),
+                                    child: const Text(
+                                      '¿Olvidaste tu contraseña?',
+                                      style: TextStyle(color: kBrand),
+                                    ),
                                   ),
                                 ],
                               ),
 
                               const SizedBox(height: 6),
-                              // Botón principal
                               ElevatedButton(
-                                onPressed: _login,
+                                onPressed: _loading ? null : _login,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.black,
-                                  foregroundColor: Colors.white,
-                                  minimumSize: const Size(double.infinity, 52),
+                                  foregroundColor: Colors.white, // texto blanco
+                                  minimumSize:
+                                      const Size(double.infinity, 52),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
-                                child: const Text('Iniciar sesión'),
+                                child: Text(
+                                    _loading ? 'Entrando…' : 'Iniciar sesión'),
                               ),
-                              const SizedBox(height: 10),
 
-                              // Separador
+                              const SizedBox(height: 10),
                               Row(
                                 children: const [
                                   Expanded(child: Divider()),
                                   Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                                    child: Text('o', style: TextStyle(color: Colors.black54)),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 8.0),
+                                    child: Text('o',
+                                        style: TextStyle(color: kBrand)),
                                   ),
                                   Expanded(child: Divider()),
                                 ],
                               ),
                               const SizedBox(height: 10),
-
-                              // Botón “crear cuenta”
                               OutlinedButton(
-                                onPressed: () {
-                                  Navigator.push(
+                                onPressed: () async {
+                                  _clearAll();
+                                  final result = await Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) => const RegistrarsePage(),
                                     ),
                                   );
+                                  // Si Registro devolvió datos, auto-rellenamos email y avisamos
+                                  if (result is Map &&
+                                      result['status'] == 'registered') {
+                                    final mail =
+                                        (result['email'] as String?) ?? '';
+                                    if (mounted) {
+                                      setState(() {
+                                        _emailCtrl.text = mail;
+                                      });
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  '¡Registro exitoso! Inicia sesión con tu correo.')));
+                                    }
+                                  } else {
+                                    _clearAll();
+                                  }
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  minimumSize: const Size(double.infinity, 52),
-                                  side: const BorderSide(color: Colors.black87, width: 1.2),
+                                  minimumSize:
+                                      const Size(double.infinity, 52),
+                                  side: const BorderSide(
+                                      color: kBrand, width: 1.2),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
+                                  foregroundColor: kBrand,
                                 ),
-                                child: const Text(
-                                  'Crear cuenta nueva',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
+                                child: const Text('Crear cuenta nueva',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),
@@ -214,33 +318,32 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     const SizedBox(height: 16),
-                    // Texto legal
+                    // Mantengo blanco para contraste sobre el fondo oscuro
                     RichText(
                       textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: const TextStyle(color: Colors.white70, fontSize: 12.5),
+                      text: const TextSpan(
+                        style:
+                            TextStyle(color: Colors.white70, fontSize: 12.5),
                         children: [
-                          const TextSpan(text: 'Al continuar, aceptas nuestros '),
+                          TextSpan(text: 'Al continuar, aceptas nuestros '),
                           TextSpan(
                             text: 'Términos de Servicio',
-                            style: const TextStyle(
+                            style: TextStyle(
                               decoration: TextDecoration.underline,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
-                            recognizer: TapGestureRecognizer()..onTap = () {},
                           ),
-                          const TextSpan(text: ' y la '),
+                          TextSpan(text: ' y la '),
                           TextSpan(
                             text: 'Política de Privacidad',
-                            style: const TextStyle(
+                            style: TextStyle(
                               decoration: TextDecoration.underline,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
-                            recognizer: TapGestureRecognizer()..onTap = () {},
                           ),
-                          const TextSpan(text: '.'),
+                          TextSpan(text: '.'),
                         ],
                       ),
                     ),

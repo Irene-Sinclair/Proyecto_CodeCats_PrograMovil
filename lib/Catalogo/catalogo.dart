@@ -5,14 +5,14 @@ import 'package:proyecto_codecats/Carrito/carrito.dart';
 
 // Modelo de Producto
 class Product {
-  final String id;
-  final bool activo;
-  final String categoria;
-  final String codigo;
-  final String imagen;
-  final String nombre;
-  final double precio;
-  final String talla;
+   String id;
+   bool activo;
+   String categoria;
+   String codigo;
+   String imagen;
+   String nombre;
+   double precio;
+   String talla;
 
   Product({
     required this.id,
