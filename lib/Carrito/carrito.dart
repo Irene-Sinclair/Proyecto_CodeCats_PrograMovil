@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:proyecto_codecats/botton_navigator.dart'; 
+import 'package:proyecto_codecats/Catalogo/catalogo.dart';
+import 'package:proyecto_codecats/user_profile/User.dart';
+import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';
 
 // Modelo para los artículos del carrito
 class CartItem {
@@ -59,6 +63,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   List<CartItem> firebaseCartItems = [];
   bool isLoading = true;
   String? errorMessage;
+  int _currentIndex = 1; // Índice para Carrito
 
   @override
   void initState() {
@@ -254,6 +259,40 @@ class _PaymentScreenState extends State<PaymentScreen> {
                         _buildOrderButton(),
                       ],
                     ),
+      bottomNavigationBar: CustomBottomNavigation(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          
+          switch (index) {
+            case 0:
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => CatalogScreen()),
+              );
+              break;
+            case 1:
+              // Ya estamos en carrito
+              break;
+            case 2:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfileScreen()),
+              );
+              break;
+
+            case 3:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AdminSettingsScreen()),
+                  );
+                  break;
+          }
+        },
+        accessType: 'admin',
+      ),
     );
   }
 
@@ -266,7 +305,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
-        'Pantalla de pago',
+        'Tu carrito',
         style: TextStyle(
           color: Colors.black,
           fontSize: 18,
@@ -274,12 +313,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         ),
       ),
       centerTitle: true,
-      actions: [
-        IconButton(
-          icon: Icon(Icons.refresh, color: Colors.black),
-          onPressed: _loadCartFromFirebase,
-        ),
-      ],
+      
     );
   }
 
@@ -534,7 +568,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: Colors.black,
-                  ),
+                    ),
                 ),
                 SizedBox(height: 8),
                 GestureDetector(
@@ -619,32 +653,32 @@ class _PaymentScreenState extends State<PaymentScreen> {
         String newAddress = '';
         return AlertDialog(
           title: Text('Dirección de envío'),
-          content: TextField(
-            onChanged: (value) => newAddress = value,
-            decoration: InputDecoration(
-              hintText: 'Ingresa tu dirección de envío',
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                if (newAddress.isNotEmpty) {
-                  setState(() {
-                    shippingAddress = newAddress;
-                  });
-                }
-                Navigator.pop(context);
-              },
-              child: Text('Guardar'),
-            ),
-          ],
-        );
+      content: TextField(
+        onChanged: (value) => newAddress = value,
+        decoration: InputDecoration(
+          hintText: 'Ingresa tu dirección de envío',
+          border: OutlineInputBorder(),
+        ),
+        maxLines: 3,
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () {
+            if (newAddress.isNotEmpty) {
+              setState(() {
+                shippingAddress = newAddress;
+              });
+            }
+            Navigator.pop(context);
+          },
+          child: Text('Guardar'),
+        ),
+      ],
+    );
       },
     );
   }
@@ -696,8 +730,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
       },
     );
   }
-
-  
 
   void _showDeleteItemDialog(CartItem item) {
     showDialog(

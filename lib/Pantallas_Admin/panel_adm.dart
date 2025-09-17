@@ -4,7 +4,8 @@ import 'package:proyecto_codecats/GestionProductos/gestion_productos.dart';
 import 'package:proyecto_codecats/Pantallas_Admin/gestion_clientes_adm.dart';
 import 'package:proyecto_codecats/Carrito/carrito.dart';
 import 'package:proyecto_codecats/Catalogo/catalogo.dart';
-
+import 'package:proyecto_codecats/botton_navigator.dart';
+import 'package:proyecto_codecats/user_profile/User.dart';
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -17,7 +18,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
-  int _currentIndex = 3; // Índice inicial para Ajustes
+  int _currentIndex = 3; // Índice para Ajustes (admin)
 
   @override
   void initState() {
@@ -52,7 +53,7 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
 
     // Navegar a la pantalla correspondiente
     switch (index) {
-      case 0: // Home
+      case 0: // Inicio
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => CatalogScreen()),
@@ -64,13 +65,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
           MaterialPageRoute(builder: (context) => PaymentScreen()),
         );
         break;
-      case 2: // Perfil
+      case 2: // Perfil 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => PaymentScreen()),
+          MaterialPageRoute(builder: (context) => ProfileScreen()), // Cambia por tu pantalla de perfil
         );
         break;
-      case 3: // Ajustes (ya estamos aquí)
+      case 3: // Ajustes Admin (ya estamos aquí)
         // No hacer nada, ya estamos en ajustes
         break;
     }
@@ -135,27 +136,10 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
           ),
         ),
       ),
-      bottomNavigationBar: Container(
-        height: 80,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildBottomNavItem(Icons.home_outlined, 0, 'Inicio'),
-            _buildBottomNavItem(Icons.shopping_cart_outlined, 1, 'Carrito'),
-            _buildBottomNavItem(Icons.person_outline, 2, 'Perfil'),
-            _buildBottomNavItem(Icons.settings_outlined, 3, 'Ajustes'),
-          ],
-        ),
+      bottomNavigationBar: CustomBottomNavigation(
+        currentIndex: _currentIndex,
+        onTap: _onBottomNavItemTapped,
+        accessType: 'admin', // Siempre es admin en esta pantalla
       ),
     );
   }
@@ -238,39 +222,6 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
           ),
         );
       },
-    );
-  }
-
-  Widget _buildBottomNavItem(IconData icon, int index, String tooltip) {
-    bool isActive = _currentIndex == index;
-    return GestureDetector(
-      onTap: () => _onBottomNavItemTapped(index),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isActive ? Colors.blue.shade50 : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? Colors.black : Colors.grey.shade500,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              tooltip,
-              style: TextStyle(
-                fontSize: 10,
-                color: isActive ? Colors.black : Colors.grey.shade500,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

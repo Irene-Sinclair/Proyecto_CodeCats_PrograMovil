@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:proyecto_codecats/Carrito/carrito.dart';
+import 'package:proyecto_codecats/user_profile/User.dart';
+import 'package:proyecto_codecats/Catalogo/catalogo.dart';
+import 'package:proyecto_codecats/botton_navigator.dart';
+import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -8,6 +13,8 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  int _currentIndex = 2; // Índice para Perfil
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -32,8 +39,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
           // Botón cerrar sesión
           _buildLogoutButton(),
           
-          // Bottom navigation
-          _buildBottomNavigation(),
+          // Bottom navigation usando el widget personalizado
+          CustomBottomNavigation(
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              setState(() {
+                _currentIndex = index;
+              });
+              
+              switch (index) {
+                case 0:
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => CatalogScreen()),
+                  );
+                  break;
+                case 1:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => PaymentScreen()),
+                  );
+                  break;
+                case 2:
+                  // Ya estamos en el perfil, no hacer nada
+                  break;
+
+                case 3:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AdminSettingsScreen()),
+                  );
+                  break;
+              }
+            },
+            accessType: 'admin',
+          ),
         ],
       ),
     );
@@ -274,32 +314,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomNavigation() {
-    return Container(
-      height: 60,
-      color: Colors.white,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          _buildBottomNavItem(Icons.home, false),
-          _buildBottomNavItem(Icons.shopping_cart_outlined, false),
-          _buildBottomNavItem(Icons.person, true),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBottomNavItem(IconData icon, bool isSelected) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Icon(
-        icon,
-        color: isSelected ? Colors.black : Colors.grey[400],
-        size: 28,
       ),
     );
   }

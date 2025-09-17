@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';
 import 'package:proyecto_codecats/Carrito/carrito.dart';
+import 'package:proyecto_codecats/user_profile/User.dart';
+import 'package:proyecto_codecats/botton_navigator.dart';
 
 // Modelo de Producto
 class Product {
@@ -43,12 +45,14 @@ class Product {
 class CatalogScreen extends StatefulWidget {
   @override
   _CatalogScreenState createState() => _CatalogScreenState();
+  
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = '';
   bool _showFilters = false;
+  int _currentIndex = 0; // Índice para Inicio
   
   final List<String> _categories = [
     'Camisetas',
@@ -58,6 +62,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
     'Vestidos',
     'Chaquetas'
   ];
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +89,39 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigation(),
+      bottomNavigationBar: CustomBottomNavigation(
+        currentIndex: _currentIndex,
+        onTap: (index) {
+          setState(() {
+            _currentIndex = index;
+          });
+          
+          switch (index) {
+            case 0:
+              // Ya estamos en inicio
+              break;
+            case 1:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PaymentScreen()),
+              );
+              break;
+            case 2:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ProfileScreen()),
+              );
+              break;
+            case 3:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => AdminSettingsScreen()),
+                  );
+                  break;
+          }
+        },
+        accessType: 'admin',
+      ),
     );
   }
 
@@ -417,64 +455,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ),
     );
   }
-
-int _currentIndex = 0; // Variable para controlar el índice seleccionado
-
-Widget _buildBottomNavigation() {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      border: Border(top: BorderSide(color: Colors.grey[200]!)),
-    ),
-    child: BottomNavigationBar(
-      backgroundColor: Colors.white,
-      selectedItemColor: Colors.black,
-      unselectedItemColor: Colors.grey[400],
-      type: BottomNavigationBarType.fixed,
-      elevation: 0,
-      currentIndex: _currentIndex, // Usar la variable de estado
-      onTap: (index) {
-        // Actualizar el índice seleccionado
-        setState(() {
-          _currentIndex = index;
-        });
-        
-        // Navegar a diferentes pantallas según el índice
-        switch (index) {
-          case 0: // Inicio - ya estás en esta pantalla
-            // No hacer nada o volver al inicio si es necesario
-            break;
-          case 1: // Carrito
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => PaymentScreen()),
-            );
-            break;
-          case 2: // Perfil
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => AdminSettingsScreen()),
-            );
-            break;
-        }
-      },
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Inicio',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.shopping_cart),
-          label: 'Carrito',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.person),
-          label: 'Perfil',
-        ),
-      ],
-    ),
-  );
-}
 
   @override
   void dispose() {
