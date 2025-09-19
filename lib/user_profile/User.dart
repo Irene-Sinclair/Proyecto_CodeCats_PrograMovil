@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:proyecto_codecats/Carrito/carrito.dart';
-import 'package:proyecto_codecats/user_profile/User.dart';
 import 'package:proyecto_codecats/Catalogo/catalogo.dart';
 import 'package:proyecto_codecats/botton_navigator.dart';
 import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';

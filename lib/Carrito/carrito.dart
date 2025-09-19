@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:proyecto_codecats/botton_navigator.dart'; 
 import 'package:proyecto_codecats/Catalogo/catalogo.dart';
 import 'package:proyecto_codecats/user_profile/User.dart';
@@ -55,10 +56,11 @@ class PaymentScreen extends StatefulWidget {
 
 class _PaymentScreenState extends State<PaymentScreen> {
   String selectedPaymentMethod = 'Transferencia';
-  String shippingAddress = 'Añadir dirección de envío';
+  String shippingAddress = '';
+  String userCity = '';
   
-  // ID del usuario para pruebas - cambiar según necesites
-  final String currentUserId = 'CLIENT01';
+  // UID del usuario autenticado
+  String? currentUserId;
   
   List<CartItem> firebaseCartItems = [];
   bool isLoading = true;
@@ -68,10 +70,52 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCartFromFirebase();
+    _getCurrentUser();
+  }
+
+  void _getCurrentUser() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      setState(() {
+        currentUserId = user.uid;
+      });
+      await _loadUserAddress();
+      await _loadCartFromFirebase();
+    } else {
+      setState(() {
+        errorMessage = 'Usuario no autenticado';
+        isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadUserAddress() async {
+    if (currentUserId == null) return;
+
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      
+      // Buscar los datos del cliente por UID
+      DocumentSnapshot userDoc = await firestore
+          .collection('Clients')
+          .doc(currentUserId)
+          .get();
+
+      if (userDoc.exists) {
+        Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
+        setState(() {
+          shippingAddress = userData['direccion'] ?? '';
+          userCity = userData['ciudad'] ?? '';
+        });
+      }
+    } catch (e) {
+      print('Error loading user address: $e');
+    }
   }
 
   Future<void> _loadCartFromFirebase() async {
+    if (currentUserId == null) return;
+
     setState(() {
       isLoading = true;
       errorMessage = null;
@@ -134,6 +178,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _removeItemFromCart(CartItem item) async {
+    if (currentUserId == null) return;
+
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
       
@@ -225,7 +271,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                                       Icon(Icons.person, color: Colors.grey[600]),
                                       SizedBox(width: 8),
                                       Text(
-                                        'Usuario: $currentUserId',
+                                        'Usuario: ${currentUserId ?? 'No identificado'}',
                                         style: TextStyle(
                                           fontSize: 14,
                                           color: Colors.grey[700],
@@ -318,6 +364,16 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Widget _buildShippingSection() {
+    // Mostrar dirección completa si existe
+    String displayAddress = '';
+    if (shippingAddress.isNotEmpty && userCity.isNotEmpty) {
+      displayAddress = '$shippingAddress, $userCity';
+    } else if (shippingAddress.isNotEmpty) {
+      displayAddress = shippingAddress;
+    } else {
+      displayAddress = 'Añadir dirección de envío';
+    }
+
     return Container(
       padding: EdgeInsets.all(16),
       child: Column(
@@ -341,10 +397,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    shippingAddress,
+                    displayAddress,
                     style: TextStyle(
                       fontSize: 16,
-                      color: shippingAddress == 'Añadir dirección de envío' 
+                      color: displayAddress == 'Añadir dirección de envío' 
                           ? Colors.grey[600] 
                           : Colors.black,
                     ),
@@ -650,35 +706,76 @@ class _PaymentScreenState extends State<PaymentScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        String newAddress = '';
+        String newAddress = shippingAddress;
+        String newCity = userCity;
         return AlertDialog(
           title: Text('Dirección de envío'),
-      content: TextField(
-        onChanged: (value) => newAddress = value,
-        decoration: InputDecoration(
-          hintText: 'Ingresa tu dirección de envío',
-          border: OutlineInputBorder(),
-        ),
-        maxLines: 3,
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancelar'),
-        ),
-        TextButton(
-          onPressed: () {
-            if (newAddress.isNotEmpty) {
-              setState(() {
-                shippingAddress = newAddress;
-              });
-            }
-            Navigator.pop(context);
-          },
-          child: Text('Guardar'),
-        ),
-      ],
-    );
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                onChanged: (value) => newAddress = value,
+                decoration: InputDecoration(
+                  hintText: 'Dirección',
+                  border: OutlineInputBorder(),
+                  labelText: 'Dirección',
+                ),
+                controller: TextEditingController(text: shippingAddress),
+                maxLines: 2,
+              ),
+              SizedBox(height: 16),
+              TextField(
+                onChanged: (value) => newCity = value,
+                decoration: InputDecoration(
+                  hintText: 'Ciudad',
+                  border: OutlineInputBorder(),
+                  labelText: 'Ciudad',
+                ),
+                controller: TextEditingController(text: userCity),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (newAddress.isNotEmpty && newCity.isNotEmpty && currentUserId != null) {
+                  try {
+                    // Actualizar en Firebase
+                    await FirebaseFirestore.instance
+                        .collection('Clients')
+                        .doc(currentUserId)
+                        .update({
+                      'direccion': newAddress,
+                      'ciudad': newCity,
+                    });
+
+                    setState(() {
+                      shippingAddress = newAddress;
+                      userCity = newCity;
+                    });
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Dirección actualizada correctamente')),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error al actualizar la dirección: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+                Navigator.pop(context);
+              },
+              child: Text('Guardar'),
+            ),
+          ],
+        );
       },
     );
   }
@@ -756,18 +853,43 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
+  void _showAddressRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Dirección requerida'),
+          content: Text('No tienes una dirección agregada. ¿Deseas agregar una?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('No'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => ProfileScreen()),
+                );
+              },
+              child: Text('Sí'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _processOrder() {
-    if (shippingAddress == 'Añadir dirección de envío') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Por favor, añade una dirección de envío'),
-          backgroundColor: Colors.red,
-        ),
-      );
+    // Verificar si tiene dirección
+    if (shippingAddress.isEmpty) {
+      _showAddressRequiredDialog();
       return;
     }
 
     final total = firebaseCartItems.fold<double>(0.0, (sum, item) => sum + (item.precio * item.cantidad));
+    String displayAddress = userCity.isNotEmpty ? '$shippingAddress, $userCity' : shippingAddress;
 
     // Aquí implementarías la lógica para procesar el pedido
     showDialog(
@@ -781,10 +903,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
             children: [
               Text('Tu pedido ha sido realizado exitosamente.'),
               SizedBox(height: 16),
-              Text('Usuario: $currentUserId'),
+              Text('Usuario: ${currentUserId ?? 'No identificado'}'),
               Text('Total: ${total.toStringAsFixed(2)} L'),
               Text('Método de pago: $selectedPaymentMethod'),
-              Text('Dirección: $shippingAddress'),
+              Text('Dirección: $displayAddress'),
               if (selectedPaymentMethod == 'Transferencia') ...[
                 SizedBox(height: 16),
                 Text(

@@ -4,7 +4,7 @@ import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';
 import 'package:proyecto_codecats/Carrito/carrito.dart';
 import 'package:proyecto_codecats/user_profile/User.dart';
 import 'package:proyecto_codecats/botton_navigator.dart';
-
+import 'package:proyecto_codecats/Catalogo/descripcion.dart';
 // Modelo de Producto
 class Product {
    String id;
@@ -287,11 +287,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
         return GridView.builder(
           padding: EdgeInsets.all(16),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-          ),
+  crossAxisCount: 2,
+  childAspectRatio: 0.65, // Cambia de 0.75 a 0.65
+  crossAxisSpacing: 12,   // Reduce de 16 a 12
+  mainAxisSpacing: 12,    // Reduce de 16 a 12
+),
           itemCount: products.length,
           itemBuilder: (context, index) {
             return _buildProductCard(products[index]);
@@ -316,8 +316,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return true;
   }
 
-  Widget _buildProductCard(Product product) {
-    return Container(
+Widget _buildProductCard(Product product) {
+  return GestureDetector(
+    onTap: () {
+      // Navegar a la pantalla ProductDescription con solo el código del producto
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProductDescription(productCode: product.codigo),
+        ),
+      );
+    },
+    child: Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -329,132 +339,146 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Imagen del producto
-          Expanded(
-            flex: 3,
-            child: Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-              ),
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
-                    child: Image.network(
-                      product.imagen,
-                      width: double.infinity,
-                      height: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[200],
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 50,
-                          ),
-                        );
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Container(
-                          color: Colors.grey[200],
-                          child: Center(
-                            child: CircularProgressIndicator(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Imagen del producto - altura fija o flexible
+              Container(
+                height: constraints.maxHeight * 0.6,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                ),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+                      child: Image.network(
+                        product.imagen,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey[200],
+                            child: Icon(
+                              Icons.image_not_supported,
                               color: Colors.grey[400],
-                              strokeWidth: 2,
+                              size: 30,
+                            ),
+                          );
+                        },
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.grey[400],
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    if (product.talla.isNotEmpty)
+                      Positioned(
+                        top: 4,
+                        left: 4,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            'Talla ${_limitText(product.talla, 10)}',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
                             ),
                           ),
-                        );
-                      },
-                    ),
-                  ),
-                  // Talla
-                  if (product.talla.isNotEmpty)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
-                          'Talla ${product.talla}',
+                      ),
+                  ],
+                ),
+              ),
+              // Información del producto
+              Padding(
+                padding: EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Categoría y nombre
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _limitText(product.categoria, 10),
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Colors.grey[600],
                             fontSize: 10,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
+                        SizedBox(height: 2),
+                        Text(
+                          _limitText(product.nombre, 15),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            fontSize: 12,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                ],
+                    SizedBox(height: 4),
+                    // Precio y código
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _limitText('L. ${product.precio.toStringAsFixed(0)}', 10),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          _limitText(product.codigo, 50),
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 8,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
-          // Información del producto
-          Expanded(
-            flex: 2,
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.categoria,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        product.nombre,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          fontSize: 14,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '\$${product.precio.toStringAsFixed(0)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      Text(
-                        product.codigo,
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 10,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+            ],
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
+
+String _limitText(String text, int maxLength) {
+  if (text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + '...';
+}
+
 
   @override
   void dispose() {
