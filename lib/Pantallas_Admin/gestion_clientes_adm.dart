@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'vizualizacion_clientes.dart';
 
 class ClientManagementScreen extends StatefulWidget {
   const ClientManagementScreen({Key? key}) : super(key: key);
@@ -8,27 +10,7 @@ class ClientManagementScreen extends StatefulWidget {
 }
 
 class _ClientManagementScreenState extends State<ClientManagementScreen> {
-  List<ClientModel> clients = [
-    ClientModel(
-      id: '1',
-      name: 'Cliente 1',
-      code: 'Código:11101',
-      profileImage: 'https://via.placeholder.com/50',
-    ),
-    ClientModel(
-      id: '2',
-      name: 'Cliente 2',
-      code: 'Código:11101',
-      profileImage: 'https://via.placeholder.com/50',
-    ),
-    ClientModel(
-      id: '3',
-      name: 'Cliente 3',
-      code: 'Código:11101',
-      profileImage: 'https://via.placeholder.com/50',
-    ),
-  ];
-
+  List<ClientModel> clients = [];
   bool isLoading = false;
 
   @override
@@ -43,14 +25,57 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
     });
 
     try {
-      // Implementar consulta a Firestore
-      // Simular carga por ahora
-      await Future.delayed(const Duration(seconds: 1));
+      // Consultar la colección "Clients" en Firestore
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('Clients')
+          .get();
+
+      List<ClientModel> loadedClients = [];
+
+      for (var doc in querySnapshot.docs) {
+        var data = doc.data() as Map<String, dynamic>?;
+
+        if (data != null) {
+          loadedClients.add(
+            ClientModel(
+              id: (data['ID'] as String?) ?? doc.id,
+              name:
+                  (data['nombre'] as String?) ??
+                  'Sin nombre', // Cambiado a 'nombre'
+              code: 'Código: ${(data['ID'] as String?) ?? doc.id}',
+              profileImage:
+                  (data['imagen_perfil'] as String?) ??
+                  '', // Ahora toma la URL de la imagen
+              email: (data['email'] as String?) ?? '',
+              phone:
+                  (data['telefono'] as String?) ??
+                  'Sin teléfono', // Agregado teléfono
+              city:
+                  (data['ciudad'] as String?) ??
+                  'Sin ciudad', // Agregado ciudad
+              address:
+                  (data['direccion'] as String?) ??
+                  'Sin dirección', // Agregado dirección
+              password:
+                  (data['password'] as String?) ?? '', // Agregado password
+            ),
+          );
+        }
+      }
+
       setState(() {
+        clients = loadedClients;
         isLoading = false;
       });
     } catch (e) {
       print('Error cargando clientes: $e');
+      // Mostrar error al usuario
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al cargar clientes: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
       setState(() {
         isLoading = false;
       });
@@ -58,13 +83,63 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
   }
 
   Future<void> _deleteClient(String clientId) async {
-    // No se usa más, eliminado
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      // Buscar el documento por el campo ID
+      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('Clients')
+          .where('ID', isEqualTo: clientId)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        // Eliminar el documento
+        await querySnapshot.docs.first.reference.delete();
+
+        // Recargar la lista
+        await _loadClientsFromFirebase();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cliente eliminado correctamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error eliminando cliente: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al eliminar cliente: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
   void _showClientDetails(ClientModel client) {
-    ScaffoldMessenger.of(
+    Navigator.push(
       context,
-    ).showSnackBar(const SnackBar(content: Text('Demo ver info del cliente')));
+      MaterialPageRoute(
+        builder: (context) => VisualizacionClientesScreen(
+          clientId: client.id,
+          clientName: client.name,
+          clientEmail: client.email,
+          clientCode: client.code,
+          clientPhone: client.phone.isNotEmpty ? client.phone : 'Sin teléfono',
+          clientCity: client.city.isNotEmpty ? client.city : 'Sin ciudad',
+          clientAddress: client.address.isNotEmpty
+              ? client.address
+              : 'Sin dirección',
+          clientProfileImage: client.profileImage,
+        ),
+      ),
+    );
   }
 
   void _confirmDeleteClient(ClientModel client) {
@@ -115,6 +190,12 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
           ),
         ),
         centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: _loadClientsFromFirebase,
+            icon: const Icon(Icons.refresh, color: Colors.black),
+          ),
+        ],
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -144,9 +225,9 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
                     leading: CircleAvatar(
                       radius: 24,
                       backgroundColor: Colors.blue.shade100,
-                      child: ClipOval(
-                        child: client.profileImage.isNotEmpty
-                            ? Image.network(
+                      child: client.profileImage.isNotEmpty
+                          ? ClipOval(
+                              child: Image.network(
                                 client.profileImage,
                                 width: 48,
                                 height: 48,
@@ -158,13 +239,28 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
                                     color: Colors.blue.shade700,
                                   );
                                 },
-                              )
-                            : Icon(
-                                Icons.person,
-                                size: 24,
-                                color: Colors.blue.shade700,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return CircularProgressIndicator(
+                                        value:
+                                            loadingProgress
+                                                    .expectedTotalBytes !=
+                                                null
+                                            ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                            : null,
+                                      );
+                                    },
                               ),
-                      ),
+                            )
+                          : Icon(
+                              Icons.person,
+                              size: 24,
+                              color: Colors.blue.shade700,
+                            ),
                     ),
                     title: Text(
                       client.name,
@@ -173,12 +269,25 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    subtitle: Text(
-                      client.code,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                        fontSize: 14,
-                      ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (client.email.isNotEmpty)
+                          Text(
+                            client.email,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        Text(
+                          client.code,
+                          style: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -203,17 +312,57 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
   }
 }
 
-// Modelo de datos para Cliente
+// Modelo de datos para Cliente actualizado con todos los campos
 class ClientModel {
   final String id;
   final String name;
   final String code;
   final String profileImage;
+  final String email;
+  final String phone;
+  final String city;
+  final String address;
+  final String password;
 
   ClientModel({
     required this.id,
     required this.name,
     required this.code,
     required this.profileImage,
+    required this.email,
+    required this.phone,
+    required this.city,
+    required this.address,
+    required this.password,
   });
+
+  // Método para convertir desde Firestore
+  factory ClientModel.fromFirestore(DocumentSnapshot doc) {
+    Map<String, dynamic>? data = doc.data() as Map<String, dynamic>?;
+    return ClientModel(
+      id: (data?['ID'] as String?) ?? doc.id,
+      name: (data?['nombre'] as String?) ?? 'Sin nombre',
+      code: 'Código: ${(data?['ID'] as String?) ?? doc.id}',
+      profileImage: (data?['imagen_perfil'] as String?) ?? '',
+      email: (data?['email'] as String?) ?? '',
+      phone: (data?['telefono'] as String?) ?? '',
+      city: (data?['ciudad'] as String?) ?? '',
+      address: (data?['direccion'] as String?) ?? '',
+      password: (data?['password'] as String?) ?? '',
+    );
+  }
+
+  // Método para convertir a Firestore
+  Map<String, dynamic> toFirestore() {
+    return {
+      'ID': id,
+      'nombre': name,
+      'email': email,
+      'telefono': phone,
+      'ciudad': city,
+      'direccion': address,
+      'imagen_perfil': profileImage,
+      'password': password,
+    };
+  }
 }
