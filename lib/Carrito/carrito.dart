@@ -262,24 +262,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                // Información del usuario
-                                Container(
-                                  padding: EdgeInsets.all(16),
-                                  color: Colors.grey[50],
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.person, color: Colors.grey[600]),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Usuario: ${currentUserId ?? 'No identificado'}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[700],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                              
                                 
                                 // Sección de envío
                                 _buildShippingSection(),

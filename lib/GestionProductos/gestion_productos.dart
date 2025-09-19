@@ -287,48 +287,73 @@ class GestionProductosScreen extends StatelessWidget {
   }
 
   void _mostrarDialogoEliminar(BuildContext context, String nombreProducto, String productoId) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Eliminar producto'),
-          content: Text('¿Estás seguro de que quieres eliminar "$nombreProducto"?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Eliminar producto'),
+        content: Text('¿Estás seguro de que quieres eliminar "$nombreProducto"?\n\nEsta acción también lo eliminará de todos los carritos de compras.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cancelar',
+              style: TextStyle(color: Colors.grey[600]),
             ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                try {
-                  await _firestore.collection('Products').doc(productoId).delete();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Producto "$nombreProducto" eliminado'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al eliminar: $error'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: Text(
-                'Eliminar',
-                style: TextStyle(color: Colors.red),
-              ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              try {
+                // Primero eliminar el producto de todos los carritos
+                await _eliminarProductoDeCarritos(productoId);
+                
+                // Luego eliminar el producto de la colección Products
+                await _firestore.collection('Products').doc(productoId).delete();
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Producto "$nombreProducto" eliminado'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (error) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error al eliminar: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: Text(
+              'Eliminar',
+              style: TextStyle(color: Colors.red),
             ),
-          ],
-        );
-      },
-    );
+          ),
+        ],
+      );
+    },
+  );
+}
+
+Future<void> _eliminarProductoDeCarritos(String productoId) async {
+  try {
+    // Buscar todos los documentos en la colección Carts que tengan este producto
+    QuerySnapshot carritosQuery = await _firestore
+        .collection('Carts')
+        .where('id_product', isEqualTo: productoId)
+        .get();
+
+    // Eliminar cada documento encontrado
+    for (QueryDocumentSnapshot doc in carritosQuery.docs) {
+      await doc.reference.delete();
+    }
+
+    print('Producto eliminado de ${carritosQuery.docs.length} carritos');
+  } catch (error) {
+    print('Error eliminando producto de carritos: $error');
+    error; // Relanzar el error para manejarlo en el método principal
   }
+}
 }
