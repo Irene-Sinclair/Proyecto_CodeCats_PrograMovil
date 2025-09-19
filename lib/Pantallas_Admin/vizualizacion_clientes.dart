@@ -185,7 +185,9 @@ class _VisualizacionClientesScreenState
           _buildInfoItem(
             icon: Icons.phone_outlined,
             title: 'Teléfono',
-            value: widget.clientPhone,
+            value: widget.clientPhone.isNotEmpty
+                ? widget.clientPhone
+                : 'Sin teléfono',
           ),
 
           SizedBox(height: 20),

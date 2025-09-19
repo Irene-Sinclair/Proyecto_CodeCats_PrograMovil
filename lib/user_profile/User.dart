@@ -3,6 +3,8 @@ import 'package:proyecto_codecats/Carrito/carrito.dart';
 import 'package:proyecto_codecats/Catalogo/catalogo.dart';
 import 'package:proyecto_codecats/botton_navigator.dart';
 import 'package:proyecto_codecats/Pantallas_Admin/panel_adm.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // Importar Firebase Auth
+import 'package:proyecto_codecats/Login/login.dart'; 
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -13,6 +15,8 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   int _currentIndex = 2; // Índice para Perfil
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+
 
   @override
   Widget build(BuildContext context) {
@@ -287,7 +291,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildLogoutButton() {
+Widget _buildLogoutButton() {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: SizedBox(
@@ -330,12 +334,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
               child: Text('Cancelar'),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(context);
-                // Aquí implementariamos la lógica para cerrar sesión
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Sesión cerrada')),
-                );
+                await _logoutUser();
               },
               child: Text(
                 'Cerrar Sesión',
@@ -347,4 +348,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+
+  Future<void> _logoutUser() async {
+    try {
+      await _auth.signOut();
+      
+      // Navegar a la pantalla de login y limpiar el stack de navegación
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginPage()),
+        (Route<dynamic> route) => false,
+      );
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Sesión cerrada exitosamente')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al cerrar sesión: $e')),
+      );
+    }
+  }
+
 }

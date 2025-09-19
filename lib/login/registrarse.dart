@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Si quieres fallback duro a Login cuando no se pueda hacer pop,
-// descomenta e importa la ruta correcta:
-// import 'login.dart'; // ajustar ruta si tu estructura es distinta
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 class RegistrarsePage extends StatefulWidget {
   const RegistrarsePage({super.key});
@@ -24,6 +22,9 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
   bool _obscure1 = true;
   bool _obscure2 = true;
   bool _loading = false;
+
+  // Referencia a Firestore
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   @override
   void dispose() {
@@ -71,25 +72,41 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
     return null;
   }
 
-  // -------- Registro solo Email/Password --------
+    // -------- Registro Email/Password + Firestore --------
   Future<void> _registerEmail() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     setState(() => _loading = true);
 
     try {
+      // Crear usuario en Authentication
       final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailCtrl.text.trim(),
         password: _passCtrl.text,
       );
+      
       // Nombre completo = Nombre + Apellido
-      final fullName =
-          '${_firstCtrl.text.trim()} ${_lastCtrl.text.trim()}'.trim();
+      final fullName = '${_firstCtrl.text.trim()} ${_lastCtrl.text.trim()}'.trim();
+      
+      // Actualizar display name en Authentication
       await cred.user?.updateDisplayName(fullName);
+
+      // Crear documento en Firestore con UID como ID del documento
+      await _firestore.collection('Clients').doc(cred.user!.uid).set({
+        'ciudad': '', // Valor por defecto
+        'direccion': '', // Valor por defecto
+        'email': _emailCtrl.text.trim(),
+        'imagen_perfil': '', // Cadena vacía por defecto
+        'nombre': fullName,
+        'password': _passCtrl.text, // Nota: Almacenar contraseñas no es recomendado en producción
+        'telefono': '', // Valor por defecto
+        'uid': cred.user!.uid, // Guardar también el UID como campo
+        'fecha_creacion': FieldValue.serverTimestamp(), // Fecha de creación
+      });
 
       if (!mounted) return;
 
-      // Aviso y cierre de sesión (para que el primer login sea limpio)
+      // Aviso y cierre de sesión
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Cuenta creada ✅ Ahora inicia sesión.')),
       );
@@ -104,8 +121,7 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(result);
       } else {
-        // Fallback duro si no hay pila (p.ej. llegaste con replacement)
-        // Descomenta si importaste LoginPage arriba:
+        // Fallback duro si no hay pila
         // Navigator.of(context).pushAndRemoveUntil(
         //   MaterialPageRoute(builder: (_) => const LoginPage()),
         //   (route) => false,

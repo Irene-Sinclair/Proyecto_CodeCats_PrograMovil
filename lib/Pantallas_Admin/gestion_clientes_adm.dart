@@ -41,23 +41,23 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
               id: (data['ID'] as String?) ?? doc.id,
               name:
                   (data['nombre'] as String?) ??
-                  'Sin nombre', // Cambiado a 'nombre'
-              code: 'Código: ${(data['ID'] as String?) ?? doc.id}',
+                  'Sin nombre',
+                code: (data['ID'] as String?) ?? doc.id,
               profileImage:
                   (data['imagen_perfil'] as String?) ??
-                  '', // Ahora toma la URL de la imagen
+                  '',
               email: (data['email'] as String?) ?? '',
               phone:
                   (data['telefono'] as String?) ??
-                  'Sin teléfono', // Agregado teléfono
+                  'Sin teléfono',
               city:
                   (data['ciudad'] as String?) ??
-                  'Sin ciudad', // Agregado ciudad
+                  'Sin ciudad',
               address:
                   (data['direccion'] as String?) ??
-                  'Sin dirección', // Agregado dirección
+                  'Sin dirección',
               password:
-                  (data['password'] as String?) ?? '', // Agregado password
+                  (data['password'] as String?) ?? '',
             ),
           );
         }
@@ -82,45 +82,9 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
     }
   }
 
-  Future<void> _deleteClient(String clientId) async {
-    setState(() {
-      isLoading = true;
-    });
-
-    try {
-      // Buscar el documento por el campo ID
-      QuerySnapshot querySnapshot = await FirebaseFirestore.instance
-          .collection('Clients')
-          .where('ID', isEqualTo: clientId)
-          .get();
-
-      if (querySnapshot.docs.isNotEmpty) {
-        // Eliminar el documento
-        await querySnapshot.docs.first.reference.delete();
-
-        // Recargar la lista
-        await _loadClientsFromFirebase();
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cliente eliminado correctamente'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
-    } catch (e) {
-      print('Error eliminando cliente: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error al eliminar cliente: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      setState(() {
-        isLoading = false;
-      });
-    }
-  }
+  // ELIMINÉ LOS MÉTODOS DE ELIMINACIÓN
+  // Future<void> _deleteClient(String clientId) async { ... }
+  // void _confirmDeleteClient(ClientModel client) { ... }
 
   void _showClientDetails(ClientModel client) {
     Navigator.push(
@@ -139,34 +103,6 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
           clientProfileImage: client.profileImage,
         ),
       ),
-    );
-  }
-
-  void _confirmDeleteClient(ClientModel client) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Eliminar Cliente'),
-          content: Text(
-            '¿Estás seguro de que deseas eliminar a ${client.name}?',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancelar'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _deleteClient(client.id);
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
     );
   }
 
@@ -289,20 +225,10 @@ class _ClientManagementScreenState extends State<ClientManagementScreen> {
                         ),
                       ],
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          onPressed: () => _showClientDetails(client),
-                          icon: const Icon(Icons.visibility_outlined),
-                          color: Colors.grey.shade600,
-                        ),
-                        IconButton(
-                          onPressed: () => _confirmDeleteClient(client),
-                          icon: const Icon(Icons.delete_outline),
-                          color: Colors.grey.shade600,
-                        ),
-                      ],
+                    trailing: IconButton( // ← SOLO QUEDÓ EL BOTÓN DE VISUALIZAR
+                      onPressed: () => _showClientDetails(client),
+                      icon: const Icon(Icons.visibility_outlined),
+                      color: Colors.grey.shade600,
                     ),
                   ),
                 );
@@ -342,7 +268,7 @@ class ClientModel {
     return ClientModel(
       id: (data?['ID'] as String?) ?? doc.id,
       name: (data?['nombre'] as String?) ?? 'Sin nombre',
-      code: 'Código: ${(data?['ID'] as String?) ?? doc.id}',
+      code: (data?['ID'] as String?) ?? doc.id,
       profileImage: (data?['imagen_perfil'] as String?) ?? '',
       email: (data?['email'] as String?) ?? '',
       phone: (data?['telefono'] as String?) ?? '',

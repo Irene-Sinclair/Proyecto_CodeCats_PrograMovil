@@ -152,7 +152,7 @@ class _LoginPageState extends State<LoginPage> {
                                 decoration: const InputDecoration(
                                   prefixIcon: Icon(Icons.person_outline,
                                       color: kBrand),
-                                  hintText: 'Correo @gmail.com',
+                                  hintText: 'example@gmail.com',
                                   hintStyle: TextStyle(color: kBrand),
                                 ),
                                 style: const TextStyle(color: kBrand),
@@ -195,7 +195,8 @@ class _LoginPageState extends State<LoginPage> {
                                 },
                               ),
 
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 8),
+                              // Checkbox "Recordarme"
                               Row(
                                 children: [
                                   Checkbox(
@@ -206,41 +207,45 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   const Text('Recordarme',
                                       style: TextStyle(color: kBrand)),
-                                  const Spacer(),
-                                  TextButton(
-                                    onPressed: () async {
-                                      final email = _emailCtrl.text.trim();
-                                      if (!_isGmail(email)) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    'Ingresa tu correo @gmail primero')));
-                                        return;
-                                      }
-                                      try {
-                                        await FirebaseAuth.instance
-                                            .sendPasswordResetEmail(
-                                                email: email);
-                                        if (!mounted) return;
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(const SnackBar(
-                                                content: Text(
-                                                    'Te enviamos un correo para restablecer tu contraseña')));
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context)
-                                            .showSnackBar(SnackBar(
-                                                content: Text('Error: $e')));
-                                      }
-                                    },
-                                    child: const Text(
-                                      '¿Olvidaste tu contraseña?',
-                                      style: TextStyle(color: kBrand),
-                                    ),
-                                  ),
                                 ],
                               ),
 
-                              const SizedBox(height: 6),
+                              const SizedBox(height: 10),
+                              // Botón "¿Olvidaste tu contraseña?" centrado
+                              Center(
+                                child: TextButton(
+                                  onPressed: () async {
+                                    final email = _emailCtrl.text.trim();
+                                    if (!_isGmail(email)) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Ingresa tu correo @gmail primero')));
+                                      return;
+                                    }
+                                    try {
+                                      await FirebaseAuth.instance
+                                          .sendPasswordResetEmail(
+                                              email: email);
+                                      if (!mounted) return;
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(const SnackBar(
+                                              content: Text(
+                                                  'Te enviamos un correo para restablecer tu contraseña')));
+                                    } catch (e) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(SnackBar(
+                                              content: Text('Error: $e')));
+                                    }
+                                  },
+                                  child: const Text(
+                                    '¿Olvidaste tu contraseña?',
+                                    style: TextStyle(color: kBrand),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
                               ElevatedButton(
                                 onPressed: _loading ? null : _login,
                                 style: ElevatedButton.styleFrom(
