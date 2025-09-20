@@ -4,6 +4,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'registrarse.dart';
 import '../Catalogo/catalogo.dart';
+import 'terminos_servicio.dart';
+import 'politicas_privacidad.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -73,8 +75,9 @@ class _LoginPageState extends State<LoginPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -150,8 +153,10 @@ class _LoginPageState extends State<LoginPage> {
                                 controller: _emailCtrl,
                                 keyboardType: TextInputType.emailAddress,
                                 decoration: const InputDecoration(
-                                  prefixIcon: Icon(Icons.person_outline,
-                                      color: kBrand),
+                                  prefixIcon: Icon(
+                                    Icons.person_outline,
+                                    color: kBrand,
+                                  ),
                                   hintText: 'example@gmail.com',
                                   hintStyle: TextStyle(color: kBrand),
                                 ),
@@ -171,8 +176,10 @@ class _LoginPageState extends State<LoginPage> {
                                 controller: _passCtrl,
                                 obscureText: _obscure,
                                 decoration: InputDecoration(
-                                  prefixIcon: const Icon(Icons.lock_outline,
-                                      color: kBrand),
+                                  prefixIcon: const Icon(
+                                    Icons.lock_outline,
+                                    color: kBrand,
+                                  ),
                                   hintText: 'password',
                                   hintStyle: const TextStyle(color: kBrand),
                                   suffixIcon: IconButton(
@@ -201,12 +208,14 @@ class _LoginPageState extends State<LoginPage> {
                                 children: [
                                   Checkbox(
                                     value: _remember,
-                                    onChanged: (v) => setState(
-                                        () => _remember = v ?? false),
+                                    onChanged: (v) =>
+                                        setState(() => _remember = v ?? false),
                                     activeColor: kBrand,
                                   ),
-                                  const Text('Recordarme',
-                                      style: TextStyle(color: kBrand)),
+                                  const Text(
+                                    'Recordarme',
+                                    style: TextStyle(color: kBrand),
+                                  ),
                                 ],
                               ),
 
@@ -217,25 +226,36 @@ class _LoginPageState extends State<LoginPage> {
                                   onPressed: () async {
                                     final email = _emailCtrl.text.trim();
                                     if (!_isGmail(email)) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  'Ingresa tu correo @gmail primero')));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Ingresa tu correo @gmail primero',
+                                          ),
+                                        ),
+                                      );
                                       return;
                                     }
                                     try {
                                       await FirebaseAuth.instance
-                                          .sendPasswordResetEmail(
-                                              email: email);
+                                          .sendPasswordResetEmail(email: email);
                                       if (!mounted) return;
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  'Te enviamos un correo para restablecer tu contraseña')));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Te enviamos un correo para restablecer tu contraseña',
+                                          ),
+                                        ),
+                                      );
                                     } catch (e) {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(SnackBar(
-                                              content: Text('Error: $e')));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(content: Text('Error: $e')),
+                                      );
                                     }
                                   },
                                   child: const Text(
@@ -251,14 +271,14 @@ class _LoginPageState extends State<LoginPage> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.black,
                                   foregroundColor: Colors.white, // texto blanco
-                                  minimumSize:
-                                      const Size(double.infinity, 52),
+                                  minimumSize: const Size(double.infinity, 52),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                 ),
                                 child: Text(
-                                    _loading ? 'Entrando…' : 'Iniciar sesión'),
+                                  _loading ? 'Entrando…' : 'Iniciar sesión',
+                                ),
                               ),
 
                               const SizedBox(height: 10),
@@ -267,9 +287,12 @@ class _LoginPageState extends State<LoginPage> {
                                   Expanded(child: Divider()),
                                   Padding(
                                     padding: EdgeInsets.symmetric(
-                                        horizontal: 8.0),
-                                    child: Text('o',
-                                        style: TextStyle(color: kBrand)),
+                                      horizontal: 8.0,
+                                    ),
+                                    child: Text(
+                                      'o',
+                                      style: TextStyle(color: kBrand),
+                                    ),
                                   ),
                                   Expanded(child: Divider()),
                                 ],
@@ -293,28 +316,35 @@ class _LoginPageState extends State<LoginPage> {
                                       setState(() {
                                         _emailCtrl.text = mail;
                                       });
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(const SnackBar(
-                                              content: Text(
-                                                  '¡Registro exitoso! Inicia sesión con tu correo.')));
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            '¡Registro exitoso! Inicia sesión con tu correo.',
+                                          ),
+                                        ),
+                                      );
                                     }
                                   } else {
                                     _clearAll();
                                   }
                                 },
                                 style: OutlinedButton.styleFrom(
-                                  minimumSize:
-                                      const Size(double.infinity, 52),
+                                  minimumSize: const Size(double.infinity, 52),
                                   side: const BorderSide(
-                                      color: kBrand, width: 1.2),
+                                    color: kBrand,
+                                    width: 1.2,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(16),
                                   ),
                                   foregroundColor: kBrand,
                                 ),
-                                child: const Text('Crear cuenta nueva',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w600)),
+                                child: const Text(
+                                  'Crear cuenta nueva',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
                               ),
                             ],
                           ),
@@ -323,32 +353,55 @@ class _LoginPageState extends State<LoginPage> {
                     ),
 
                     const SizedBox(height: 16),
-                    // Mantengo blanco para contraste sobre el fondo oscuro
+                    // RichText con navegación a las pantallas
                     RichText(
                       textAlign: TextAlign.center,
-                      text: const TextSpan(
-                        style:
-                            TextStyle(color: Colors.white70, fontSize: 12.5),
+                      text: TextSpan(
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12.5,
+                        ),
                         children: [
-                          TextSpan(text: 'Al continuar, aceptas nuestros '),
+                          const TextSpan(
+                            text: 'Al continuar, aceptas nuestros ',
+                          ),
                           TextSpan(
                             text: 'Términos de Servicio',
-                            style: TextStyle(
+                            style: const TextStyle(
                               decoration: TextDecoration.underline,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const TermsOfServiceScreen(),
+                                  ),
+                                );
+                              },
                           ),
-                          TextSpan(text: ' y la '),
+                          const TextSpan(text: ' y la '),
                           TextSpan(
                             text: 'Política de Privacidad',
-                            style: TextStyle(
+                            style: const TextStyle(
                               decoration: TextDecoration.underline,
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                             ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const PrivacyPolicyScreen(),
+                                  ),
+                                );
+                              },
                           ),
-                          TextSpan(text: '.'),
+                          const TextSpan(text: '.'),
                         ],
                       ),
                     ),
