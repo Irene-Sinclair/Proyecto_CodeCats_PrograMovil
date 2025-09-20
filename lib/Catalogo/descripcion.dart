@@ -152,17 +152,64 @@ class _ProductDescriptionState extends State<ProductDescription> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(),
-          SliverToBoxAdapter(
-            child: isLoading
-                ? _buildLoadingState()
-                : errorMessage != null
-                ? _buildErrorState()
-                : productData == null
-                ? _buildEmptyState()
-                : _buildProductContent(),
+      body: Column(
+        children: [
+          // Contenedor blanco para el header
+          Container(
+            color: Colors.white,
+            child: SafeArea(
+              child: Container(
+                height: 60,
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    // Botón de regresar
+                    IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios,
+                        color: Colors.black,
+                        size: 24,
+                      ),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    // Título centrado
+                    Expanded(
+                      child: Text(
+                        'Descripción',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    // Botón de refrescar
+                    IconButton(
+                      icon: Icon(Icons.refresh, color: Colors.black, size: 24),
+                      onPressed: _loadProductData,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Contenido principal
+          Expanded(
+            child: CustomScrollView(
+              slivers: [
+                _buildSliverAppBar(),
+                SliverToBoxAdapter(
+                  child: isLoading
+                      ? _buildLoadingState()
+                      : errorMessage != null
+                      ? _buildErrorState()
+                      : productData == null
+                      ? _buildEmptyState()
+                      : _buildProductContent(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -177,49 +224,12 @@ class _ProductDescriptionState extends State<ProductDescription> {
     final String imageUrl = productData?['imagen'] ?? '';
 
     return SliverAppBar(
-      expandedHeight: 350,
+      expandedHeight: 300,
       floating: false,
-      pinned: true,
+      pinned: false,
       elevation: 0,
-      backgroundColor: Colors.white,
-      leading: Container(
-        margin: EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.9),
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: Offset(0, 2),
-            ),
-          ],
-        ),
-        child: IconButton(
-          icon: Icon(Icons.arrow_back_ios, color: Colors.black, size: 18),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      actions: [
-        Container(
-          margin: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 8,
-                offset: Offset(0, 2),
-              ),
-            ],
-          ),
-          child: IconButton(
-            icon: Icon(Icons.refresh, color: Colors.black, size: 20),
-            onPressed: _loadProductData,
-          ),
-        ),
-      ],
+      backgroundColor: Colors.transparent,
+      automaticallyImplyLeading: false,
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
