@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
 class EditarProductoScreen extends StatefulWidget {
   final String productoId;
@@ -18,6 +21,9 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _precioController = TextEditingController();
   final TextEditingController _tallaController = TextEditingController();
+  File? _imagenSeleccionada;
+  final ImagePicker _picker = ImagePicker();
+  final FirebaseStorage _storage = FirebaseStorage.instance;
   
   String? _categoriaSeleccionada;
   String? _estadoSeleccionado; // Cambiado a String para el dropdown
@@ -274,15 +280,20 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           child: InkWell(
             onTap: _seleccionarImagen,
             borderRadius: BorderRadius.circular(8),
-            child: _productoData?['imagen'] != null
-                ? Image.network(
-                    _productoData!['imagen'],
+            child: _imagenSeleccionada != null
+                ? Image.file(
+                    _imagenSeleccionada!,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return _buildPlaceholderImage();
-                    },
                   )
-                : _buildPlaceholderImage(),
+                : _productoData?['imagen'] != null
+                    ? Image.network(
+                        _productoData!['imagen'],
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return _buildPlaceholderImage();
+                        },
+                      )
+                    : _buildPlaceholderImage(),
           ),
         ),
       ],
@@ -428,24 +439,30 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     );
   }
 
-  void _seleccionarImagen() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Seleccionar imagen'),
-        content: const Text('Funcionalidad de selección de imagen por implementar'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _seleccionarImagen() async {
+    try {
+      final XFile? imagen = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+      );
+
+      if (imagen != null) {
+        setState(() {
+          _imagenSeleccionada = File(imagen.path);
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al seleccionar imagen: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  Future<void> _guardarCambios() async {
-    // Validar campos
+   Future<void> _guardarCambios() async {
+    // Validaciones previas (las que ya tienes)
     if (_nombreController.text.isEmpty ||
         _precioController.text.isEmpty ||
         _tallaController.text.isEmpty ||
@@ -479,6 +496,22 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     });
 
     try {
+      String imagenUrl = _productoData?['imagen'] ?? '';
+
+      // Subir nueva imagen si se seleccionó una
+      if (_imagenSeleccionada != null) {
+        // Crear referencia al archivo en Firebase Storage
+        final String nombreArchivo = 'productos/${widget.productoId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final Reference referencia = _storage.ref().child(nombreArchivo);
+        
+        // Subir el archivo
+        final UploadTask uploadTask = referencia.putFile(_imagenSeleccionada!);
+        final TaskSnapshot snapshot = await uploadTask;
+        
+        // Obtener la URL de descarga
+        imagenUrl = await snapshot.ref.getDownloadURL();
+      }
+
       // Convertir el estado de string a boolean
       final bool estadoActivo = _estadoSeleccionado == 'Activo';
 
@@ -488,9 +521,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
         'precio': precio,
         'talla': _tallaController.text.trim(),
         'categoria': _categoriaSeleccionada,
-        'activo': estadoActivo, // Convertir a boolean
-        // Mantener la imagen existente si no se cambia
-        'imagen': _productoData?['imagen'] ?? 'https://via.placeholder.com/150/8B4513/FFFFFF?text=Producto',
+        'activo': estadoActivo,
+        'imagen': imagenUrl, // Usar la URL existente o la nueva
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
