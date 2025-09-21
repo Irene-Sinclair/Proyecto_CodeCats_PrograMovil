@@ -6,6 +6,8 @@ import 'package:proyecto_codecats/Carrito/carrito.dart';
 import 'package:proyecto_codecats/Catalogo/catalogo.dart';
 import 'package:proyecto_codecats/botton_navigator.dart';
 import 'package:proyecto_codecats/user_profile/User.dart';
+import 'package:proyecto_codecats/Pantallas_Admin/gestion_pedidos.dart';
+
 
 class AdminSettingsScreen extends StatefulWidget {
   const AdminSettingsScreen({super.key});
@@ -131,6 +133,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
                 title: 'Crear Productos',
                 onTap: () => _navigateToScreen(AgregarProductoScreen()),
                 index: 2,
+              ),
+              const SizedBox(height: 16),
+              _buildMenuOption(
+                icon: Icons.assignment_outlined,
+                title: 'Gestion de pedidos',
+                onTap: () => _navigateToScreen(GestionPedidosScreen()),
+                index: 3,
               ),
             ],
           ),

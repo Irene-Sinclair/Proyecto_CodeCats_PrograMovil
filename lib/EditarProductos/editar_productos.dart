@@ -20,6 +20,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   final TextEditingController _tallaController = TextEditingController();
   
   String? _categoriaSeleccionada;
+  String? _estadoSeleccionado; // Cambiado a String para el dropdown
   
   final List<String> _categorias = [
     'Ropa',
@@ -29,6 +30,11 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     'Camisetas',
     'Vestidos',
     'Chaquetas'
+  ];
+
+  final List<String> _estados = [
+    'Activo',
+    'Inactivo'
   ];
 
   bool _isLoading = true;
@@ -52,6 +58,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
           _precioController.text = _productoData!['precio']?.toString() ?? '';
           _tallaController.text = _productoData!['talla'] ?? '';
           _categoriaSeleccionada = _productoData!['categoria'];
+          // Convertir boolean a string para el dropdown
+          _estadoSeleccionado = (_productoData!['activo'] ?? true) ? 'Activo' : 'Inactivo';
           _isLoading = false;
         });
       } else {
@@ -122,7 +130,7 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    // Campo talla (ahora es texto)
+                    // Campo talla
                     _buildTextField(
                       label: 'Talla',
                       icon: Icons.straighten,
@@ -152,6 +160,21 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
                       icon: Icons.attach_money,
                       controller: _precioController,
                       keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 20),
+                    
+                    // Dropdown para estado activo/inactivo
+                    _buildDropdownField(
+                      label: 'Estado del Producto',
+                      icon: Icons.circle,
+                      value: _estadoSeleccionado,
+                      items: _estados,
+                      hint: 'Seleccionar estado',
+                      onChanged: (value) {
+                        setState(() {
+                          _estadoSeleccionado = value;
+                        });
+                      },
                     ),
                   ],
                 ),
@@ -426,7 +449,8 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     if (_nombreController.text.isEmpty ||
         _precioController.text.isEmpty ||
         _tallaController.text.isEmpty ||
-        _categoriaSeleccionada == null) {
+        _categoriaSeleccionada == null ||
+        _estadoSeleccionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor, completa todos los campos'),
@@ -455,12 +479,16 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
     });
 
     try {
+      // Convertir el estado de string a boolean
+      final bool estadoActivo = _estadoSeleccionado == 'Activo';
+
       // Actualizar el producto en Firebase
       await _firestore.collection('Products').doc(widget.productoId).update({
         'nombre': _nombreController.text.trim(),
         'precio': precio,
         'talla': _tallaController.text.trim(),
         'categoria': _categoriaSeleccionada,
+        'activo': estadoActivo, // Convertir a boolean
         // Mantener la imagen existente si no se cambia
         'imagen': _productoData?['imagen'] ?? 'https://via.placeholder.com/150/8B4513/FFFFFF?text=Producto',
       });
@@ -521,10 +549,14 @@ class _EditarProductoScreenState extends State<EditarProductoScreen> {
   bool _hayCambios() {
     if (_productoData == null) return false;
     
+    final bool estadoActual = _productoData!['activo'] ?? true;
+    final bool nuevoEstado = _estadoSeleccionado == 'Activo';
+    
     return _nombreController.text != _productoData!['nombre'] ||
            _tallaController.text != _productoData!['talla'] ||
            _categoriaSeleccionada != _productoData!['categoria'] ||
-           _precioController.text != _productoData!['precio']?.toString();
+           _precioController.text != _productoData!['precio']?.toString() ||
+           nuevoEstado != estadoActual;
   }
 
   @override

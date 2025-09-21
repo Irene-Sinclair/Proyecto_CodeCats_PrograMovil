@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:proyecto_codecats/botton_navigator.dart'; 
 import 'package:proyecto_codecats/Catalogo/catalogo.dart';
 import 'package:proyecto_codecats/user_profile/User.dart';
@@ -58,6 +59,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String selectedPaymentMethod = 'Transferencia';
   String shippingAddress = '';
   String userCity = '';
+  String userName = '';
+  String userPhone = '';
   
   // UID del usuario autenticado
   String? currentUserId;
@@ -79,7 +82,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       setState(() {
         currentUserId = user.uid;
       });
-      await _loadUserAddress();
+      await _loadUserData();
       await _loadCartFromFirebase();
     } else {
       setState(() {
@@ -89,7 +92,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  Future<void> _loadUserAddress() async {
+  Future<void> _loadUserData() async {
     if (currentUserId == null) return;
 
     try {
@@ -106,10 +109,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
         setState(() {
           shippingAddress = userData['direccion'] ?? '';
           userCity = userData['ciudad'] ?? '';
+          userName = userData['nombre'] ?? 'Cliente';
+          userPhone = userData['telefono'] ?? '';
         });
       }
     } catch (e) {
-      print('Error loading user address: $e');
+      print('Error loading user data: $e');
     }
   }
 
@@ -262,8 +267,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                              
-                                
                                 // Sección de envío
                                 _buildShippingSection(),
                                 
@@ -363,7 +366,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'ENVÍO',
+            'DIRECCION DE ENVÍO',
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -576,7 +579,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       color: Colors.grey[600],
                     ),
                   ),
-                // QUITAR LA LÍNEA QUE MUESTRA LA CANTIDAD
                 Text(
                   'Código: ${item.id}',
                   style: TextStyle(
@@ -657,7 +659,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
         height: 50,
         child: ElevatedButton(
           onPressed: firebaseCartItems.isEmpty ? null : () {
-            _processOrder();
+            _showConfirmationDialog();
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: firebaseCartItems.isEmpty ? Colors.grey : Colors.black,
@@ -858,42 +860,272 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  void _processOrder() {
-    // Verificar si tiene dirección
+  // Método para mostrar la pantalla de confirmación
+  void _showConfirmationDialog() {
+    final total = firebaseCartItems.fold<double>(0.0, (sum, item) => sum + (item.precio * item.cantidad));
+    String displayAddress = userCity.isNotEmpty ? '$shippingAddress, $userCity' : shippingAddress;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Confirmar Pedido'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('¿Estás seguro de realizar este pedido?'),
+                SizedBox(height: 16),
+                Text('Resumen del pedido:', style: TextStyle(fontWeight: FontWeight.bold)),
+                SizedBox(height: 8),
+                Text('Artículos: ${firebaseCartItems.length}'),
+                Text('Total: ${total.toStringAsFixed(2)} L'),
+                Text('Método de pago: $selectedPaymentMethod'),
+                Text('Dirección de envío: $displayAddress'),
+                SizedBox(height: 16),
+                Text('⚠️ Al confirmar, WhatsApp se abrirá automáticamente. Debes enviar el mensaje para finalizar tu compra.',
+                style: TextStyle(color: Colors.orange, fontSize: 12)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancelar'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _processOrder();
+              },
+              child: Text('Confirmar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Método para procesar el pedido
+  Future<void> _processOrder() async {
     if (shippingAddress.isEmpty) {
       _showAddressRequiredDialog();
       return;
     }
 
-    final total = firebaseCartItems.fold<double>(0.0, (sum, item) => sum + (item.precio * item.cantidad));
-    String displayAddress = userCity.isNotEmpty ? '$shippingAddress, $userCity' : shippingAddress;
+    try {
+      setState(() {
+        isLoading = true;
+      });
 
-    // Aquí implementarías la lógica para procesar el pedido
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final total = firebaseCartItems.fold<double>(0.0, (sum, item) => sum + (item.precio * item.cantidad));
+      
+      // 1. Crear el pedido en la colección Orders
+      final orderData = {
+        'user_id': currentUserId,
+        'user_name': userName,
+        'user_phone': userPhone,
+        'items': firebaseCartItems.map((item) => {
+          'id': item.id,
+          'nombre': item.nombre,
+          'precio': item.precio,
+          'cantidad': item.cantidad,
+          'talla': item.talla,
+        }).toList(),
+        'total': total,
+        'payment_method': selectedPaymentMethod,
+        'shipping_address': shippingAddress,
+        'city': userCity,
+        'status': 'pendiente',
+        'created_at': FieldValue.serverTimestamp(),
+      };
+
+      // Guardar el pedido en Firestore
+      final orderRef = await firestore.collection('Orders').add(orderData);
+      final orderId = orderRef.id;
+
+      // 2. Desactivar los productos vendidos
+      final batch = firestore.batch();
+      for (final item in firebaseCartItems) {
+        // Buscar el documento del producto por su código
+        final productQuery = await firestore
+            .collection('Products')
+            .where('codigo', isEqualTo: item.id)
+            .limit(1)
+            .get();
+
+        if (productQuery.docs.isNotEmpty) {
+          final productDoc = productQuery.docs.first;
+          batch.update(productDoc.reference, {'activo': false});
+        }
+      }
+
+      // 3. ELIMINAR TODOS los productos del carrito de este usuario
+      final cartItemsQuery = await firestore
+          .collection('Carts')
+          .where('id_user', isEqualTo: currentUserId)
+          .get();
+
+      for (final cartDoc in cartItemsQuery.docs) {
+        batch.delete(cartDoc.reference);
+      }
+
+      // Ejecutar todas las operaciones en lote
+      await batch.commit();
+
+      // 4. Enviar mensaje por WhatsApp
+      await _sendWhatsAppMessage(orderId, total);
+
+      // 5. Mostrar confirmación
+      _showOrderSuccessDialog(orderId, total);
+
+      // 6. Actualizar el estado local
+      setState(() {
+        firebaseCartItems.clear();
+        isLoading = false;
+      });
+
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al procesar el pedido: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  // Método para enviar mensaje por WhatsApp
+  Future<void> _sendWhatsAppMessage(String orderId, double total) async {
+    try {
+      // Construir el mensaje con los detalles del pedido
+      String message = '🚀 *NUEVO PEDIDO* - $orderId\n\n';
+      message += '👤 *Cliente:* $userName\n\n';
+      message += '🛒 *Artículos:*\n';
+      
+      for (final item in firebaseCartItems) {
+        message += '• ${item.nombre} (Talla: ${item.talla}) - L${item.precio.toStringAsFixed(2)}\n';
+      }
+      
+      message += '\n💰 *Total:* L${total.toStringAsFixed(2)}\n';
+      message += '💳 *Método de pago:* $selectedPaymentMethod\n';
+      message += '📦 *Dirección:* $shippingAddress, $userCity\n\n';
+      
+
+      // Codificar el mensaje para URL
+      final encodedMessage = Uri.encodeComponent(message);
+      
+      // Número de WhatsApp
+      final phoneNumber = '50432400069';
+      
+      // URLs para intentar
+      final urlsToTry = [
+        Uri.parse('whatsapp://send?phone=$phoneNumber&text=$encodedMessage'),
+        Uri.parse('https://wa.me/$phoneNumber?text=$encodedMessage'),
+        Uri.parse('https://api.whatsapp.com/send?phone=$phoneNumber&text=$encodedMessage'),
+      ];
+
+      bool whatsAppOpened = false;
+      
+      for (final url in urlsToTry) {
+        try {
+          if (await canLaunchUrl(url)) {
+            await launchUrl(url);
+            whatsAppOpened = true;
+            break;
+          }
+        } catch (e) {
+          print('Error con URL $url: $e');
+          continue;
+        }
+      }
+
+      if (!whatsAppOpened) {
+        // Mostrar aviso de que WhatsApp no está instalado
+        _showWhatsAppNotInstalledDialog(message);
+      }
+      
+    } catch (e) {
+      print('Error al enviar mensaje por WhatsApp: $e');
+      _showWhatsAppNotInstalledDialog(
+        'Error al preparar mensaje. Pedido: $orderId - Cliente: $userName - Total: L${total.toStringAsFixed(2)}'
+      );
+    }
+  }
+
+  // Mostrar diálogo cuando WhatsApp no está instalado
+  void _showWhatsAppNotInstalledDialog(String message) {
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Pedido realizado'),
+          title: Text('WhatsApp no encontrado'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Tu pedido ha sido realizado exitosamente.'),
+              Text('No se encontró la aplicación de WhatsApp en tu dispositivo.'),
               SizedBox(height: 16),
-              Text('Usuario: ${currentUserId ?? 'No identificado'}'),
-              Text('Total: ${total.toStringAsFixed(2)} L'),
-              Text('Método de pago: $selectedPaymentMethod'),
-              Text('Dirección: $displayAddress'),
-              if (selectedPaymentMethod == 'Transferencia') ...[
-                SizedBox(height: 16),
-                Text(
-                  'Datos para transferencia:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+              Text('Por favor, envía manualmente este mensaje al número: +504 3240-0069'),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300] ?? Colors.grey),
                 ),
-                Text('Banco: Banco Nacional'),
-                Text('Cuenta: 1234567890'),
-                Text('Nombre: Tu Empresa'),
-              ],
+                child: SelectableText(
+                  message,
+                  style: TextStyle(fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Aceptar'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Método para mostrar diálogo de éxito
+  void _showOrderSuccessDialog(String orderId, double total) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('✅ Pedido Realizado'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Tu pedido #$orderId ha sido realizado exitosamente.'),
+              SizedBox(height: 16),
+              Text('💰 Total: L${total.toStringAsFixed(2)}'),
+              Text('💳 Método de pago: $selectedPaymentMethod'),
+              SizedBox(height: 16),
+              
+              Text(
+                '📱 Se ha abierto WhatsApp con los detalles de tu pedido.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text(
+                '⚠️ Por favor recuerda darle ENVIAR al mensaje para confirmar tu pedido.',
+                style: TextStyle(color: Colors.orange, fontSize: 12),
+              ),
             ],
           ),
           actions: [
