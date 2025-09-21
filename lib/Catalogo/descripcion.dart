@@ -62,44 +62,61 @@ class _ProductDescriptionState extends State<ProductDescription> {
   }
 
   Future<void> _addToCart() async {
-    // Verificar si el usuario está autenticado
-    final User? currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      _showCustomSnackbar(
-        'Debes iniciar sesión para agregar productos al carrito',
-        Colors.orange,
-      );
+  // Verificar si el usuario está autenticado
+  final User? currentUser = FirebaseAuth.instance.currentUser;
+  if (currentUser == null) {
+    _showCustomSnackbar(
+      'Debes iniciar sesión para agregar productos al carrito',
+      Colors.orange,
+    );
+    return;
+  }
+
+  setState(() {
+    isAddingToCart = true;
+  });
+
+  try {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    // Verificar si el producto ya está en el carrito del usuario
+    QuerySnapshot cartQuery = await firestore
+        .collection('Carts')
+        .where('id_product', isEqualTo: widget.productCode)
+        .where('id_user', isEqualTo: currentUser.uid)
+        .limit(1)
+        .get();
+
+    if (cartQuery.docs.isNotEmpty) {
+      setState(() {
+        isAddingToCart = false;
+      });
+      
+      _showCustomSnackbar('Ya tienes este producto en tu carrito', Colors.blue);
       return;
     }
 
-    setState(() {
-      isAddingToCart = true;
+    // Agregar el producto al carrito si no existe
+    await firestore.collection('Carts').add({
+      'id_product': widget.productCode,
+      'id_user': currentUser.uid,
+      'fechaAgregado': FieldValue.serverTimestamp(),
     });
 
-    try {
-      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    setState(() {
+      isAddingToCart = false;
+    });
 
-      // Agregar el producto al carrito
-      await firestore.collection('Carts').add({
-        'id_product': widget.productCode,
-        'id_user': currentUser.uid,
-        'fechaAgregado': FieldValue.serverTimestamp(),
-      });
+    _showCustomSnackbar('¡Producto agregado al carrito!', Colors.green);
+  } catch (e) {
+    setState(() {
+      isAddingToCart = false;
+    });
 
-      setState(() {
-        isAddingToCart = false;
-      });
-
-      _showCustomSnackbar('¡Producto agregado al carrito!', Colors.green);
-    } catch (e) {
-      setState(() {
-        isAddingToCart = false;
-      });
-
-      _showCustomSnackbar('Error al agregar al carrito', Colors.red);
-      print('Error adding to cart: $e');
-    }
+    _showCustomSnackbar('Error al agregar al carrito', Colors.red);
+    print('Error adding to cart: $e');
   }
+}
 
   void _showCustomSnackbar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(

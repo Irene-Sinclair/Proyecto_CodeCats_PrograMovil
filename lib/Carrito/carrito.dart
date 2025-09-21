@@ -505,128 +505,122 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildCartItem(CartItem item) {
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Imagen del producto
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey[200],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      item.imagen,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: Colors.grey[200],
-                          child: Icon(
-                            Icons.image_not_supported,
-                            color: Colors.grey[400],
-                            size: 24,
-                          ),
-                        );
-                      },
-                    ),
+ Widget _buildCartItem(CartItem item) {
+  return Container(
+    padding: EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Imagen del producto
+        Expanded(
+          flex: 3,
+          child: Row(
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[200],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    item.imagen,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: Colors.grey[200],
+                        child: Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey[400],
+                          size: 24,
+                        ),
+                      );
+                    },
                   ),
                 ),
-              ],
-            ),
-          ),
-          
-          // Descripción
-          Expanded(
-            flex: 3,
-            child: Padding(
-              padding: EdgeInsets.only(left: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.categoria,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  Text(
-                    item.nombre,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                  if (item.talla.isNotEmpty)
-                    Text(
-                      'Talla ${item.talla}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  Text(
-                    'Cantidad: ${item.cantidad.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  Text(
-                    'Código: ${item.id}',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
               ),
-            ),
+            ],
           ),
-          
-          // Precio y botón eliminar
-          Expanded(
-            flex: 2,
+        ),
+        
+        // Descripción
+        Expanded(
+          flex: 3,
+          child: Padding(
+            padding: EdgeInsets.only(left: 12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${(item.precio * item.cantidad).toStringAsFixed(2)} L',
+                  item.categoria,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  item.nombre,
                   style: TextStyle(
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     color: Colors.black,
-                    ),
+                  ),
                 ),
-                SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {
-                    _showDeleteItemDialog(item);
-                  },
-                  child: Icon(
-                    Icons.delete_outline,
-                    color: Colors.grey[400],
-                    size: 20,
+                if (item.talla.isNotEmpty)
+                  Text(
+                    'Talla ${item.talla}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                // QUITAR LA LÍNEA QUE MUESTRA LA CANTIDAD
+                Text(
+                  'Código: ${item.id}',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[500],
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+        
+        // Precio y botón eliminar
+        Expanded(
+          flex: 2,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${(item.precio * item.cantidad).toStringAsFixed(2)} L',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              SizedBox(height: 8),
+              GestureDetector(
+                onTap: () {
+                  _showDeleteItemDialog(item);
+                },
+                child: Icon(
+                  Icons.delete_outline,
+                  color: Colors.grey[400],
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildTotalSection(double total) {
     return Container(
