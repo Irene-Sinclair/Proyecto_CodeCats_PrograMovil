@@ -17,11 +17,11 @@ class _LoginPageState extends State<LoginPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _emailCtrl = TextEditingController();
   final TextEditingController _passCtrl = TextEditingController();
+  final TextEditingController _forgotEmailCtrl = TextEditingController();
   bool _obscure = true;
   bool _remember = false;
   bool _loading = false;
 
-  // Color de marca (morado que pediste)
   static const Color kBrand = Color(0xFF843772);
 
   bool _isGmail(String s) =>
@@ -40,6 +40,7 @@ class _LoginPageState extends State<LoginPage> {
   void dispose() {
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _forgotEmailCtrl.dispose();
     super.dispose();
   }
 
@@ -81,6 +82,80 @@ class _LoginPageState extends State<LoginPage> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  // Función para mostrar el diálogo de recuperación de contraseña
+  void _showForgotPasswordDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text(
+            'Recuperar contraseña',
+            style: TextStyle(color: kBrand),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Ingresa tu correo electrónico para restablecer tu contraseña'),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _forgotEmailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
+                  labelText: 'Correo electrónico',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Ingresa tu correo electrónico';
+                  }
+                  if (!_isGmail(v.trim())) {
+                    return 'Debe ser un correo @gmail.com válido';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final email = _forgotEmailCtrl.text.trim();
+                if (email.isEmpty || !_isGmail(email)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Por favor ingresa un correo @gmail válido'),
+                    ),
+                  );
+                  return;
+                }
+                
+                try {
+                  await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Te enviamos un correo para restablecer tu contraseña'),
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              },
+              child: const Text('Enviar'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -223,41 +298,7 @@ class _LoginPageState extends State<LoginPage> {
                               // Botón "¿Olvidaste tu contraseña?" centrado
                               Center(
                                 child: TextButton(
-                                  onPressed: () async {
-                                    final email = _emailCtrl.text.trim();
-                                    if (!_isGmail(email)) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Ingresa tu correo @gmail primero',
-                                          ),
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    try {
-                                      await FirebaseAuth.instance
-                                          .sendPasswordResetEmail(email: email);
-                                      if (!mounted) return;
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'Te enviamos un correo para restablecer tu contraseña',
-                                          ),
-                                        ),
-                                      );
-                                    } catch (e) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(content: Text('Error: $e')),
-                                      );
-                                    }
-                                  },
+                                  onPressed: _showForgotPasswordDialog,
                                   child: const Text(
                                     '¿Olvidaste tu contraseña?',
                                     style: TextStyle(color: kBrand),
