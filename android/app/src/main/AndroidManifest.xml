@@ -22,7 +22,7 @@
     </queries>
 
     <application
-        android:label="proyecto_codecats"
+        android:label="Americano Cruz"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
