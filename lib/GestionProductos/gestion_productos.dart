@@ -320,56 +320,63 @@ class GestionProductosScreen extends StatelessWidget {
     );
   }
 
-  void _mostrarDialogoEliminar(BuildContext context, String nombreProducto, String productoId) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Eliminar producto'),
-          content: Text('¿Estás seguro de que quieres eliminar "$nombreProducto"?\n\nEsta acción también lo eliminará de todos los carritos de compras.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancelar',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                try {
-                  // Primero eliminar el producto de todos los carritos
-                  await _eliminarProductoDeCarritos(productoId);
-                  
-                  // Luego eliminar el producto de la colección Products
-                  await _firestore.collection('Products').doc(productoId).delete();
-                  
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Producto "$nombreProducto" eliminado'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                } catch (error) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error al eliminar: $error'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: Text(
-                'Eliminar',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
+void _mostrarDialogoEliminar(
+  BuildContext parentContext,
+  String nombreProducto,
+  String productoId,
+) {
+  // Capturamos el messenger del Scaffold padre ANTES de abrir el diálogo
+  final messenger = ScaffoldMessenger.of(parentContext);
+
+  showDialog(
+    context: parentContext,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        title: const Text('Eliminar producto'),
+        content: Text(
+          '¿Estás seguro de que quieres eliminar "$nombreProducto"?\n\n'
+          'Esta acción también lo eliminará de todos los carritos de compras.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('Cancelar', style: TextStyle(color: Colors.grey[600])),
+          ),
+          TextButton(
+            onPressed: () async {
+              // Cierra el diálogo con su propio context
+              Navigator.of(dialogContext).pop();
+
+              try {
+                // 1) Eliminar de carritos
+                await _eliminarProductoDeCarritos(productoId);
+
+                // 2) Eliminar de Products
+                await _firestore.collection('Products').doc(productoId).delete();
+
+                // 3) Mostrar SnackBar usando el messenger capturado (no el dialogContext)
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Producto "$nombreProducto" eliminado'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } catch (error) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Error al eliminar: $error'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            },
+            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      );
+    },
+  );
+}
 
   Future<void> _eliminarProductoDeCarritos(String productoId) async {
     try {
