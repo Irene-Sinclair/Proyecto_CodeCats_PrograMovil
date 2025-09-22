@@ -56,6 +56,25 @@ class _LoginPageState extends State<LoginPage> {
         email: email,
         password: _passCtrl.text,
       );
+
+      // 🔒 Bloquear acceso si NO ha verificado el correo
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && !user.emailVerified) {
+        // (Opcional) reenviar verificación
+        try { await user.sendEmailVerification(); } catch (_) {}
+
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Debes verificar tu correo. Te reenviamos el email de verificación.'),
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return; // no avanzar
+      }
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('remember_me', _remember);
       if (!mounted) return;
@@ -362,7 +381,7 @@ class _LoginPageState extends State<LoginPage> {
                                       ).showSnackBar(
                                         const SnackBar(
                                           content: Text(
-                                            '¡Registro exitoso! Inicia sesión con tu correo.',
+                                            '¡Registro exitoso! Verifica tu correo y luego inicia sesión.',
                                           ),
                                         ),
                                       );

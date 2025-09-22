@@ -17,7 +17,7 @@ class CustomBottomNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     // ✅ ÚNICA fuente de verdad: el correo del usuario autenticado
     final email = FirebaseAuth.instance.currentUser?.email?.trim().toLowerCase();
-    final bool isAdmin = (email == 'admin@gmail.com'); // 👈 aquí decidimos
+    final bool isAdmin = (email == 'sinclairmejia02@gmail.com'); // 👈 aquí decidimos
 
     return Container(
       decoration: BoxDecoration(

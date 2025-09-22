@@ -70,7 +70,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   String _getAccessType() {
   final email = FirebaseAuth.instance.currentUser?.email?.trim().toLowerCase();
-  return email == 'admin@gmail.com' ? 'admin' : 'user';
+  return email == 'sinclairmejia02@gmail.com' ? 'admin' : 'user';
 }
 
   @override

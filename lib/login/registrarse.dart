@@ -72,7 +72,7 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
     return null;
   }
 
-    // -------- Registro Email/Password + Firestore --------
+  // -------- Registro Email/Password + Firestore + Verificación --------
   Future<void> _registerEmail() async {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
@@ -104,11 +104,17 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
         'fecha_creacion': FieldValue.serverTimestamp(), // Fecha de creación
       });
 
+      // ENVIAR VERIFICACIÓN DE CORREO
+      await cred.user!.sendEmailVerification();
+
       if (!mounted) return;
 
       // Aviso y cierre de sesión
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cuenta creada ✅ Ahora inicia sesión.')),
+        const SnackBar(
+          content: Text('Te enviamos un correo de verificación. Revisa tu bandeja y confirma tu cuenta para continuar.'),
+          duration: Duration(seconds: 4),
+        ),
       );
       await FirebaseAuth.instance.signOut();
 
@@ -120,12 +126,6 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
 
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop(result);
-      } else {
-        // Fallback duro si no hay pila
-        // Navigator.of(context).pushAndRemoveUntil(
-        //   MaterialPageRoute(builder: (_) => const LoginPage()),
-        //   (route) => false,
-        // );
       }
     } on FirebaseAuthException catch (e) {
       String msg = 'Ocurrió un error: ${e.code}';
@@ -137,6 +137,10 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
         msg = 'La contraseña es muy débil (${e.code})';
       } else if (e.code == 'operation-not-allowed') {
         msg = 'Email/Password no habilitado en Firebase (${e.code})';
+      } else if (e.code == 'too-many-requests') {
+        msg = 'Demasiados intentos. Inténtalo más tarde.';
+      } else if (e.code == 'network-request-failed') {
+        msg = 'Sin conexión. Verifica tu internet.';
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
