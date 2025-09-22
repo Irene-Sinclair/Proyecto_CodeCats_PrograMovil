@@ -5,6 +5,8 @@ import 'package:proyecto_codecats/Carrito/carrito.dart';
 import 'package:proyecto_codecats/user_profile/User.dart';
 import 'package:proyecto_codecats/botton_navigator.dart';
 import 'package:proyecto_codecats/Catalogo/descripcion.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 // Modelo de Producto
 class Product {
    String id;
@@ -53,6 +55,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
   String _selectedCategory = '';
   bool _showFilters = false;
   int _currentIndex = 0; // Índice para Inicio
+
+
+
   
   final List<String> _categories = [
     'Camisetas',
@@ -63,7 +68,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
     'Chaquetas'
   ];
 
-
+  String _getAccessType() {
+  final email = FirebaseAuth.instance.currentUser?.email?.trim().toLowerCase();
+  return email == 'admin@gmail.com' ? 'admin' : 'user';
+}
 
   @override
   Widget build(BuildContext context) {
@@ -89,39 +97,28 @@ class _CatalogScreenState extends State<CatalogScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: CustomBottomNavigation(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          
-          switch (index) {
-            case 0:
-              // Ya estamos en inicio
-              break;
-            case 1:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => PaymentScreen()),
-              );
-              break;
-            case 2:
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => ProfileScreen()),
-              );
-              break;
-            case 3:
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => AdminSettingsScreen()),
-                  );
-                  break;
-          }
-        },
-        accessType: 'admin',
-      ),
+     bottomNavigationBar: CustomBottomNavigation(
+  currentIndex: _currentIndex,
+  onTap: (index) {
+    setState(() {
+      _currentIndex = index;
+    });
+    switch (index) {
+      case 0:
+        break;
+      case 1:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => PaymentScreen()));
+        break;
+      case 2:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen()));
+        break;
+      case 3:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => AdminSettingsScreen()));
+        break;
+    }
+  },
+  accessType: _getAccessType(), // 👈 AQUÍ EL CAMBIO
+),
     );
   }
 

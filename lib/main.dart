@@ -40,7 +40,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Wrapper para no tocar tu clase original.
+
 class CatalogoWrapper extends StatelessWidget {
   @override
   Widget build(BuildContext context) => CatalogScreen();

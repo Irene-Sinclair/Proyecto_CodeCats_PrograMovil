@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 agrega este import
 
 class CustomBottomNavigation extends StatelessWidget {
   final int currentIndex;
   final Function(int) onTap;
-  final String accessType; // Variable para el tipo de acceso
+  final String accessType; // lo conservamos para no romper nada
 
   const CustomBottomNavigation({
     Key? key,
     required this.currentIndex,
     required this.onTap,
-    required this.accessType, // Recibir el tipo de acceso
+    required this.accessType,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    // Determinar si es admin
-    bool isAdmin = accessType == 'admin';
+    // ✅ ÚNICA fuente de verdad: el correo del usuario autenticado
+    final email = FirebaseAuth.instance.currentUser?.email?.trim().toLowerCase();
+    final bool isAdmin = (email == 'admin@gmail.com'); // 👈 aquí decidimos
 
     return Container(
       decoration: BoxDecoration(
@@ -30,51 +32,21 @@ class CustomBottomNavigation extends StatelessWidget {
         elevation: 0,
         currentIndex: currentIndex,
         onTap: onTap,
-        items: isAdmin 
-          ? _buildAdminItems() // Items para admin
-          : _buildUserItems(), // Items para usuario normal
+        items: isAdmin ? _buildAdminItems() : _buildUserItems(),
       ),
     );
   }
 
-  // Items para usuarios administradores
-  List<BottomNavigationBarItem> _buildAdminItems() {
-    return const [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.home),
-        label: 'Inicio',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.shopping_cart),
-        label: 'Carrito',
-      ),
-      
-      BottomNavigationBarItem(
-        icon: Icon(Icons.person),
-        label: 'Perfil',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.settings), // Ícono de tuerca para admin
-        label: 'Admin',
-      ),
-    ];
-  }
+  List<BottomNavigationBarItem> _buildAdminItems() => const [
+    BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
+    BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Carrito'),
+    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+    BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Admin'),
+  ];
 
-  // Items para usuarios normales
-  List<BottomNavigationBarItem> _buildUserItems() {
-    return const [
-      BottomNavigationBarItem(
-        icon: Icon(Icons.home),
-        label: 'Inicio',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.shopping_cart),
-        label: 'Carrito',
-      ),
-      BottomNavigationBarItem(
-        icon: Icon(Icons.person),
-        label: 'Perfil',
-      ),
-    ];
-  }
+  List<BottomNavigationBarItem> _buildUserItems() => const [
+    BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
+    BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: 'Carrito'),
+    BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+  ];
 }

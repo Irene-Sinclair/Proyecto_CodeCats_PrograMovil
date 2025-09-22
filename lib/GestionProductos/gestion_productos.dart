@@ -206,7 +206,7 @@ class GestionProductosScreen extends StatelessWidget {
                               ),
                             ),
                             Text(
-                              'Precio: \$${datos['precio']?.toStringAsFixed(2) ?? '0.00'}',
+                              'Precio: \L.${datos['precio']?.toStringAsFixed(2) ?? '0.00'}',
                               style: TextStyle(
                                 color: Colors.green[700],
                                 fontSize: 12,
