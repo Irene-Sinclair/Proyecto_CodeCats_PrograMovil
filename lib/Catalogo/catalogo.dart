@@ -81,13 +81,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
         child: Column(
           children: [
           
-            // Barra de búsqueda
+            // Barra de busqueda
             _buildSearchBar(),
             
-            // Header del catálogo con filtros
+            // Header del catalogo con filtros
             _buildCatalogHeader(),
             
-            // Filtros (si están visibles)
+            // Filtros (si estan visibles)
             if (_showFilters) _buildFilters(),
             
             // Grid de productos
@@ -117,7 +117,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         break;
     }
   },
-  accessType: _getAccessType(), // 👈 AQUÍ EL CAMBIO
+  accessType: _getAccessType(), //AQUI RECONOCE EL TIPO DE USUARIO
 ),
     );
   }
@@ -142,7 +142,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
             contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           ),
           onChanged: (value) {
-            setState(() {}); // Actualizar la búsqueda
+            setState(() {}); // Actualizar la busqueda
           },
         ),
       ),

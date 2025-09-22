@@ -32,7 +32,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     'Chaquetas'
   ];
 
-  // ✅ Seleccionar imagen (Galería / Cámara)
+  // Seleccionar imagen (Galería / Cámara)
   Future<void> _seleccionarImagen() async {
     showModalBottomSheet(
       context: context,
@@ -63,7 +63,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     );
   }
 
-  // ✅ Método para elegir imagen
+  // Método para elegir imagen
   Future<void> _pickImage(ImageSource source) async {
     try {
       final XFile? pickedFile = await _imagePicker.pickImage(
@@ -90,7 +90,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     }
   }
 
-  // ✅ Subir imagen a Firebase Storage
+  // Subir imagen a Firebase Storage
   Future<String?> _subirImagen() async {
     if (_imagenSeleccionada == null) return null;
 
@@ -124,7 +124,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     }
   }
 
-  // ✅ Agregar producto a Firestore
+  // Agregar producto a Firestore
   Future<void> _agregarProducto() async {
     if (_nombreController.text.isEmpty ||
         _precioController.text.isEmpty ||
@@ -208,7 +208,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     return 'PROD-${now.millisecondsSinceEpoch}';
   }
 
-  // ✅ Widgets auxiliares para campos
+  // Widgets auxiliares para campos
   Widget _buildTextField({
     required String label,
     required IconData icon,
@@ -261,7 +261,7 @@ class _AgregarProductoScreenState extends State<AgregarProductoScreen> {
     );
   }
 
-  // ✅ Widget para imagen
+  // Widget para imagen
   Widget _buildImageField() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

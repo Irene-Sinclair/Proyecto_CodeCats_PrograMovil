@@ -538,13 +538,7 @@ class _GestionPedidosScreenState extends State<GestionPedidosScreen> {
   }
 
   // Función para cancelar pedido y reactivar productos
-  // Función para cancelar pedido y reactivar productos
-// Función para cancelar pedido y reactivar productos
-// Función para cancelar pedido y reactivar productos
-// Función para cancelar pedido y reactivar productos
-// Función para cancelar pedido y reactivar productos
-// Función para cancelar pedido y reactivar productos
-// Función para cancelar pedido y reactivar productos
+
 Future<void> _cancelarPedido(BuildContext context, String pedidoId, Map<String, dynamic> datos) async {
   try {
     // 1. Cambiar estado del pedido a "cancelado"

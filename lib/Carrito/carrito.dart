@@ -67,7 +67,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String shippingMethod = 'Entrega';
   String shippingOption = 'Envios Tegucigalpa';
 
-  // Costo de envío (puedes hacerlo dinámico más adelante)
+  // Costo de envio (se puede hacer dinamico luego)
   final double deliveryFee = 80.00;
 
   // UID del usuario autenticado
@@ -76,9 +76,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
   List<CartItem> firebaseCartItems = [];
   bool isLoading = true;
   String? errorMessage;
-  int _currentIndex = 1; // Índice para Carrito
+  int _currentIndex = 1; // indice para Carrito
 
-  // ===== Helpers de validación obligatoria =====
+  // ===== COSAS de validación obligatoria =====
   bool get _hasRequiredContactInfo =>
       userPhone.trim().isNotEmpty &&
       userCity.trim().isNotEmpty &&
@@ -125,8 +125,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                _showAddressDialog(); // 👉 ahora incluye Celular también
-              },
+                _showAddressDialog();               },
               child: const Text('Completar ahora'),
             ),
             TextButton(
@@ -139,7 +138,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
     return false;
   }
-  // ===== Fin helpers =====
+  // ===== Fin OBLIGACIONES =====
 
   @override
   void initState() {
@@ -213,12 +212,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
         Map<String, dynamic> cartData = cartDoc.data() as Map<String, dynamic>;
         String productId = (cartData['id_product'] ?? '').toString();
 
-        // Contar cuántas veces aparece este producto (para la cantidad)
+        // Contar cuantas veces aparece este producto (para la cantidad)
         int cantidad = cartSnapshot.docs
             .where((doc) => ((doc.data() as Map<String, dynamic>)['id_product'] ?? '').toString() == productId)
             .length;
 
-        // 3. Obtener los datos del producto desde la colección Products
+        // 3. Obtener los datos del producto desde la coleccion Products
         QuerySnapshot productSnapshot = await firestore
             .collection('Products')
             .where('codigo', isEqualTo: productId)
@@ -339,7 +338,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                           child: SingleChildScrollView(
                             child: Column(
                               children: [
-                                // Sección de envío
+                                // Seccion de envio
                                 _buildShippingSection(),
 
                                 // Aviso si falta info requerida
@@ -821,7 +820,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ===== DIÁLOGO ahora con CELULAR + DIRECCIÓN + CIUDAD =====
+  // ===== DIÁLOGO con CELULAR + DIRECCIÓN + CIUDAD  que son OBLIGATORIOS=====
   void _showAddressDialog() {
     showDialog(
       context: context,
@@ -1144,7 +1143,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       // 2. Desactivar los productos vendidos
       final batch = firestore.batch();
       for (final item in firebaseCartItems) {
-        // Buscar el documento del producto por su código
+        // Buscar el documento del producto por su codigo
         final productQuery = await firestore
             .collection('Products')
             .where('codigo', isEqualTo: item.id)
@@ -1195,10 +1194,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // ===== WhatsApp con formato solicitado (sin enlace de seguimiento) =====
+  // ===== WhatsApp con formato solicitado  =====
   Future<void> _sendWhatsAppMessage(String orderId, double subtotal, double envio, double total) async {
     try {
-      // Normalizar teléfono con +504 si hace falta (para impresión)
+      // Normalizar telefono con +504 si hace falta (para impresión)
       String phonePrinted = userPhone;
       if (!phonePrinted.startsWith('+504')) {
         final onlyDigits = phonePrinted.replaceAll(RegExp(r'[^0-9]'), '');
@@ -1242,7 +1241,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
       message += "Banco Ficohsa: 200020534167\n";
 
       message += "\n========================================\n";
-      message += "Generado por el catalogo de Americano Cruz"; // 👉 pie solicitado
+      message += "Generado por el catalogo de Americano Cruz"; 
 
       // Codificar mensaje para URL
       final encodedMessage = Uri.encodeComponent(message);
@@ -1283,7 +1282,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     }
   }
 
-  // Mostrar diálogo cuando WhatsApp no está instalado
+  // Mostrar dialogo cuando WhatsApp no esta instalado
   void _showWhatsAppNotInstalledDialog(String message) {
     showDialog(
       context: context,
@@ -1324,7 +1323,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // Diálogo de éxito
+  // Diálogo de exito
   void _showOrderSuccessDialog(String orderId, double total) {
     showDialog(
       context: context,

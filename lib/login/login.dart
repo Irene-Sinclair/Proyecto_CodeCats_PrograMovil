@@ -57,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
         password: _passCtrl.text,
       );
 
-      // 🔒 Bloquear acceso si NO ha verificado el correo
+      // Bloquear acceso si NO ha verificado el correo
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && !user.emailVerified) {
         // (Opcional) reenviar verificación

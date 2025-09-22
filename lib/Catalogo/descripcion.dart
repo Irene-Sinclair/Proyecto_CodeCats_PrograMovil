@@ -33,7 +33,7 @@ class _ProductDescriptionState extends State<ProductDescription> {
     try {
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-      // Buscar el producto por código
+      // Buscar el producto por codigo
       QuerySnapshot productSnapshot = await firestore
           .collection('Products')
           .where('codigo', isEqualTo: widget.productCode)
@@ -62,7 +62,7 @@ class _ProductDescriptionState extends State<ProductDescription> {
   }
 
   Future<void> _addToCart() async {
-  // Verificar si el usuario está autenticado
+  // Verificar si el usuario esta autenticado
   final User? currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser == null) {
     _showCustomSnackbar(
@@ -79,7 +79,7 @@ class _ProductDescriptionState extends State<ProductDescription> {
   try {
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-    // Verificar si el producto ya está en el carrito del usuario
+    // Verificar si el producto ya esta en el carrito del usuario
     QuerySnapshot cartQuery = await firestore
         .collection('Carts')
         .where('id_product', isEqualTo: widget.productCode)

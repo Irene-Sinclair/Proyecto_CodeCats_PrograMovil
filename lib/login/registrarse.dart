@@ -98,7 +98,7 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
         'email': _emailCtrl.text.trim(),
         'imagen_perfil': '', // Cadena vacía por defecto
         'nombre': fullName,
-        'password': _passCtrl.text, // Nota: Almacenar contraseñas no es recomendado en producción
+        'password': _passCtrl.text, 
         'telefono': '', // Valor por defecto
         'uid': cred.user!.uid, // Guardar también el UID como campo
         'fecha_creacion': FieldValue.serverTimestamp(), // Fecha de creación
