@@ -1064,12 +1064,18 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const SizedBox(height: 16),
                 const Text('Resumen del pedido:', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                Text('Artículos: ${firebaseCartItems.length}'),
-                Text('Subtotal: ${subtotal.toStringAsFixed(2)} L'),
-                Text('Envío: ${deliveryFee.toStringAsFixed(2)} L'),
-                Text('Total: ${total.toStringAsFixed(2)} L'),
-                Text('Método de pago: $selectedPaymentMethod'),
-                Text('Dirección de envío: $displayAddress'),
+                Text('Artículos:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('${firebaseCartItems.length}'),
+                Text('Subtotal:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('${subtotal.toStringAsFixed(2)} L'),
+                Text('Envío:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('${deliveryFee.toStringAsFixed(2)} L'),
+                Text('Total:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('${total.toStringAsFixed(2)} L'),
+                Text('Método de pago:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('$selectedPaymentMethod'),
+                Text('Dirección de envío:', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text('$displayAddress'),
                 const SizedBox(height: 16),
                 const Text(
                   '⚠️ Al confirmar, WhatsApp se abrirá automáticamente. Debes enviar el mensaje para finalizar tu compra.',
@@ -1204,44 +1210,44 @@ class _PaymentScreenState extends State<PaymentScreen> {
         phonePrinted = '+504$onlyDigits';
       }
 
-      // Construir el mensaje con los bloques exactos
-      String message = "";
-      message += "ID DEL PEDIDO #$orderId\n\n";
-      message += "https://www.instagram.com/americanoscruz/\n\n"; // 👉 enlace solicitado
-      message += "========================================\n";
-      message += "➜ DETALLES DEL PEDIDO\n";
+// Construir el mensaje con los bloques exactos
+String message = "";
+message += "*ID DEL PEDIDO #$orderId*\n\n";
+message += "https://www.instagram.com/americanoscruz/\n\n"; // 👉 enlace solicitado
+message += "========================================\n";
+message += "*➜ DETALLES DEL PEDIDO*\n";
 
-      for (final item in firebaseCartItems) {
-        final codigo = (item.id.isEmpty) ? 'null' : item.id;
-        message += "${item.cantidad}x ${item.nombre} (Cód: $codigo) - L ${item.precio.toStringAsFixed(2)}/unid\n";
-      }
+for (final item in firebaseCartItems) {
+  final codigo = (item.id.isEmpty) ? 'null' : item.id;
+  message += "${item.cantidad}x ${item.nombre} (Cód: $codigo) - L ${item.precio.toStringAsFixed(2)}/unid\n";
+}
 
-      message += "\n========================================\n";
-      message += "➜ DATOS DEL CLIENTE\n";
-      message += "Nombre: $userName\n";
-      message += "Teléfono: $phonePrinted\n";
-      message += "Dirección: $shippingAddress\n";
+message += "\n========================================\n";
+message += "*➜ DATOS DEL CLIENTE*\n";
+message += "Nombre: $userName\n";
+message += "Teléfono: $phonePrinted\n";
+message += "Dirección: $shippingAddress\n";
 
-      message += "\n========================================\n";
-      message += "➜ DETALLES DE ENVÍO\n";
-      message += "Método: $shippingMethod\n";
-      message += "Opción: $shippingOption \n";
+message += "\n========================================\n";
+message += "*➜ DETALLES DE ENVÍO*\n";
+message += "Método: $shippingMethod\n";
+message += "Opción: $shippingOption \n";
 
-      message += "\n========================================\n";
-      message += "➜ VALORES Y MÉTODO DE PAGO\n";
-      final cantidadArticulos = firebaseCartItems.fold<int>(0, (sum, it) => sum + it.cantidad);
-      message += "$cantidadArticulos artículos: L ${subtotal.toStringAsFixed(2)}\n";
-      message += "Entrega: L ${envio.toStringAsFixed(2)}\n";
-      message += "Método de pago: $selectedPaymentMethod\n";
-      message += "Total: L ${total.toStringAsFixed(2)}\n";
+message += "\n========================================\n";
+message += "*➜ VALORES Y MÉTODO DE PAGO*\n";
+final cantidadArticulos = firebaseCartItems.fold<int>(0, (sum, it) => sum + it.cantidad);
+message += "$cantidadArticulos artículos: L ${subtotal.toStringAsFixed(2)}\n";
+message += "Entrega: L ${envio.toStringAsFixed(2)}\n";
+message += "Método de pago: $selectedPaymentMethod\n";
+message += "Total: L ${total.toStringAsFixed(2)}\n";
 
-      message += "\n========================================\n";
-      message += "➜ CUENTAS\n";
-      message += "Banco BAC: 751407741\n";
-      message += "Banco Ficohsa: 200020534167\n";
+message += "\n========================================\n";
+message += "*➜ CUENTAS*\n";
+message += "Banco BAC: 751407741\n";
+message += "Banco Ficohsa: 200020534167\n";
 
-      message += "\n========================================\n";
-      message += "Generado por el catalogo de Americano Cruz"; 
+message += "\n========================================\n";
+message += "Generado por el catalogo de Americano Cruz";
 
       // Codificar mensaje para URL
       final encodedMessage = Uri.encodeComponent(message);
