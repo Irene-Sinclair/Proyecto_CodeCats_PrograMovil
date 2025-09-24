@@ -68,7 +68,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   String shippingOption = 'Envios Tegucigalpa';
 
   // Costo de envio (se puede hacer dinamico luego)
-  final double deliveryFee = 80.00;
+  final double deliveryFee = 0;
 
   // UID del usuario autenticado
   String? currentUserId;
@@ -1068,8 +1068,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 Text('${firebaseCartItems.length}'),
                 Text('Subtotal:', style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('${subtotal.toStringAsFixed(2)} L'),
-                Text('Envío:', style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('${deliveryFee.toStringAsFixed(2)} L'),
                 Text('Total:', style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('${total.toStringAsFixed(2)} L'),
                 Text('Método de pago:', style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -1237,14 +1235,35 @@ message += "\n========================================\n";
 message += "*➜ VALORES Y MÉTODO DE PAGO*\n";
 final cantidadArticulos = firebaseCartItems.fold<int>(0, (sum, it) => sum + it.cantidad);
 message += "$cantidadArticulos artículos: L ${subtotal.toStringAsFixed(2)}\n";
-message += "Entrega: L ${envio.toStringAsFixed(2)}\n";
 message += "Método de pago: $selectedPaymentMethod\n";
 message += "Total: L ${total.toStringAsFixed(2)}\n";
 
 message += "\n========================================\n";
 message += "*➜ CUENTAS*\n";
-message += "Banco BAC: 751407741\n";
-message += "Banco Ficohsa: 200020534167\n";
+ final FirebaseFirestore firestore = FirebaseFirestore.instance;
+// Obtener cuentas bancarias desde Firebase
+try {
+  DocumentSnapshot infoDoc = await firestore.collection('information').doc('empresa_info').get();
+  if (infoDoc.exists && infoDoc.data() != null) {
+    final data = infoDoc.data() as Map<String, dynamic>;
+    final cuentasBanco = data['cuentas_banco'] as List<dynamic>? ?? [];
+    
+    if (cuentasBanco.isNotEmpty) {
+      for (var cuenta in cuentasBanco) {
+        final nombreBanco = cuenta['nombre_banco'] ?? 'Banco';
+        final numeroCuenta = cuenta['numero_cuenta'] ?? '';
+        if (numeroCuenta.isNotEmpty) {
+          message += "$nombreBanco: $numeroCuenta\n";
+        }
+      }
+    }
+    // Si no hay cuentas o está vacío, no agregamos nada
+  }
+  // Si hay error o no existe el documento, no agregamos nada
+} catch (e) {
+  print('Error al obtener cuentas bancarias para WhatsApp: $e');
+  // No agregar cuentas si hay error
+}
 
 message += "\n========================================\n";
 message += "Generado por el catalogo de Americano Cruz";
@@ -1252,8 +1271,18 @@ message += "Generado por el catalogo de Americano Cruz";
       // Codificar mensaje para URL
       final encodedMessage = Uri.encodeComponent(message);
 
-      // Número destino de WhatsApp (tienda)
-      final phoneNumber = '50432400069';
+        // Obtener el número destino de WhatsApp desde Firebase
+   
+    String phoneNumber = '50494311009'; // Valor predeterminado en caso de error
+
+    try {
+      DocumentSnapshot infoDoc = await firestore.collection('information').doc('empresa_info').get();
+      if (infoDoc.exists) {
+        phoneNumber = (infoDoc['telefono_pedidos'] ?? '50432400069').toString();
+      }
+    } catch (e) {
+      print('Error al obtener el número de teléfono de pedidos: $e');
+    }
 
       final urlsToTry = [
         Uri.parse('whatsapp://send?phone=$phoneNumber&text=$encodedMessage'),

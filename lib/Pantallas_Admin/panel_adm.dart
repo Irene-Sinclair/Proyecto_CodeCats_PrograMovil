@@ -7,6 +7,7 @@ import 'package:proyecto_codecats/Catalogo/catalogo.dart';
 import 'package:proyecto_codecats/botton_navigator.dart';
 import 'package:proyecto_codecats/user_profile/User.dart';
 import 'package:proyecto_codecats/Pantallas_Admin/gestion_pedidos.dart';
+import 'package:proyecto_codecats/Pantallas_Admin/informacion_empresa.dart';
 
 
 class AdminSettingsScreen extends StatefulWidget {
@@ -139,6 +140,13 @@ class _AdminSettingsScreenState extends State<AdminSettingsScreen>
                 icon: Icons.assignment_outlined,
                 title: 'Gestion de pedidos',
                 onTap: () => _navigateToScreen(GestionPedidosScreen()),
+                index: 3,
+              ),
+              const SizedBox(height: 16),
+              _buildMenuOption(
+                icon: Icons.business_outlined,
+                title: 'Informacion de la empresa',
+                onTap: () => _navigateToScreen(InformacionEmpresaScreen()),
                 index: 3,
               ),
             ],

@@ -67,7 +67,7 @@ class _LoginPageState extends State<LoginPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Debes verificar tu correo. Te reenviamos el email de verificación.'),
+              content: Text('Debes verificar tu correo. Te reenviamos el email de verificación. Es posible que el correo este en la carpeta de SPAM.'),
               duration: Duration(seconds: 4),
             ),
           );
@@ -160,7 +160,7 @@ class _LoginPageState extends State<LoginPage> {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Te enviamos un correo para restablecer tu contraseña'),
+                      content: Text('Te enviamos un correo para restablecer tu contraseña. Es posible que el correo este en la carpeta de SPAM.'),
                     ),
                   );
                 } catch (e) {

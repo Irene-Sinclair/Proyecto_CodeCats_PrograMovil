@@ -55,6 +55,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
   String _selectedCategory = '';
   bool _showFilters = false;
   int _currentIndex = 0; // Índice para Inicio
+  String _accessType = 'user';
+  bool _accessTypeLoaded = false;
+
+  @override
+void initState() {
+  super.initState();
+  _loadAccessType();
+}
 
 
 
@@ -68,11 +76,37 @@ class _CatalogScreenState extends State<CatalogScreen> {
     'Chaquetas'
   ];
 
-  String _getAccessType() {
+  Future<String> _getAccessType() async {
   final email = FirebaseAuth.instance.currentUser?.email?.trim().toLowerCase();
-  return email == 'sinclairmejia02@gmail.com' ? 'admin' : 'user';
+  
+  if (email == null) return 'user';
+  
+  try {
+    DocumentSnapshot adminDoc = await FirebaseFirestore.instance
+        .collection('information')
+        .doc('admin')
+        .get();
+    
+    if (adminDoc.exists && adminDoc.data() != null) {
+      final data = adminDoc.data() as Map<String, dynamic>;
+      String adminEmail = (data['correo'] ?? '').toString().toLowerCase().trim();
+      return (email == adminEmail) ? 'admin' : 'user';
+    }
+    
+    return 'user'; // Por defecto si no existe el documento
+  } catch (e) {
+    print('Error checking access type: $e');
+    return 'user'; // Por seguridad, retornar 'user' en caso de error
+  }
 }
 
+Future<void> _loadAccessType() async {
+  final accessType = await _getAccessType();
+  setState(() {
+    _accessType = accessType;
+    _accessTypeLoaded = true;
+  });
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,7 +151,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
         break;
     }
   },
-  accessType: _getAccessType(), //AQUI RECONOCE EL TIPO DE USUARIO
+  accessType: _accessType, //AQUI RECONOCE EL TIPO DE USUARIO
 ),
     );
   }

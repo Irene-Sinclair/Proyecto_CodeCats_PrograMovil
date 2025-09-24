@@ -112,7 +112,7 @@ class _RegistrarsePageState extends State<RegistrarsePage> {
       // Aviso y cierre de sesión
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Te enviamos un correo de verificación. Revisa tu bandeja y confirma tu cuenta para continuar.'),
+          content: Text('Te enviamos un correo de verificación. Revisa tu bandeja y confirma tu cuenta para continuar. Es posible que el correo este en la carpeta de SPAM.'),
           duration: Duration(seconds: 4),
         ),
       );
