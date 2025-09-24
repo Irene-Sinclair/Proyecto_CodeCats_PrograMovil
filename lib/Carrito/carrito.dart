@@ -1066,8 +1066,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 const SizedBox(height: 8),
                 Text('Artículos:', style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('${firebaseCartItems.length}'),
-                Text('Subtotal:', style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('${subtotal.toStringAsFixed(2)} L'),
                 Text('Total:', style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text('${total.toStringAsFixed(2)} L'),
                 Text('Método de pago:', style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -1278,7 +1276,7 @@ message += "Generado por el catalogo de Americano Cruz";
     try {
       DocumentSnapshot infoDoc = await firestore.collection('information').doc('empresa_info').get();
       if (infoDoc.exists) {
-        phoneNumber = (infoDoc['telefono_pedidos'] ?? '50432400069').toString();
+        phoneNumber = "504${infoDoc['telefono_pedidos'] ?? '94311009'}";
       }
     } catch (e) {
       print('Error al obtener el número de teléfono de pedidos: $e');
